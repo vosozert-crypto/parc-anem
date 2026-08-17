@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block titre %}Scan réseau imprimantes - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Scan imprimantes (réseau + USB)</h2>
+    <p>Plage : <code>{{ etat.plage }}</code></p>
+  </div>
+  <a href="{{ url_for('imprimantes.scan') }}" class="btn">← Nouveau scan</a>
+</section>
+
+<div class="resume-cards">
+  <div class="resume-card">
+    <div class="resume-valeur" id="phase">{% if etat.en_cours %}{{ etat.phase }}{% else %}Terminé{% endif %}</div>
+    <div class="resume-libelle">Phase</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur" id="totale">{{ etat.checked }}</div>
+    <div class="resume-libelle">Adresses vérifiées</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur" id="trouvees">0</div>
+    <div class="resume-libelle">Imprimantes trouvées</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur" id="ajoutees">0</div>
+    <div class="resume-libelle">Ajoutées</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur" id="ignorees">0</div>
+    <div class="resume-libelle">Ignorées (doublons)</div>
+  </div>
+  <div class="resume-card" id="carte-statut">
+    <div class="resume-valeur">{% if etat.en_cours %}En cours…{% else %}Terminé{% endif %}</div>
+    <div class="resume-libelle">Statut</div>
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>IP / Source</th>
+        <th>Description</th>
+        <th>Type</th>
+        <th>Statut</th>
+      </tr>
+    </thead>
+    <tbody id="lignes-resultats">
+    </tbody>
+  </table>
+</div>
+
+{% if etat.en_cours %}
+<p class="info" id="info-scan">Scan en cours…</p>
+{% else %}
+<p class="info" id="info-scan">Scan terminé. Les imprimantes nouvelles sont ajoutées automatiquement.</p>
+{% endif %}
+
+<script>
+    const urlStatut = "{{ url_for('imprimantes.statut_scan', scan_id=etat.scan_id) }}";
+    const corps = document.getElementById("lignes-resultats");
+    const elTotal = document.getElementById("totale");
+    const elTrouvees = document.getElementById("trouvees");
+    const elAjoutees = document.getElementById("ajoutees");
+    const elIgnorees = document.getElementById("ignorees");
+    const elCarte = document.getElementById("carte-statut");
+    const elInfo = document.getElementById("info-scan");
+    const elPhase = document.getElementById("phase");
+
+    function afficher(resultats, existantsSet, typeDefault) {
+        for (const p of resultats) {
+            const tr = document.createElement("tr");
+            const tdIp = document.createElement("td");
+            tdIp.textContent = p.ip || p.source || "—";
+            const tdDesc = document.createElement("td");
+            tdDesc.textContent = p.description || "—";
+            const tdType = document.createElement("td");
+            tdType.textContent = p.type || typeDefault || "Réseau";
+            const tdStatut = document.createElement("td");
+            const cle = p.ip || p.description;
+            if (cle && existantsSet.has(cle)) {
+                const badge = document.createElement("span");
+                badge.className = "badge badge-gris";
+                badge.textContent = "Déjà enregistrée";
+                tdStatut.appendChild(badge);
+            } else {
+                const badge = document.createElement("span");
+                badge.className = "badge badge-en-ligne";
+                badge.textContent = "Ajoutée";
+                tdStatut.appendChild(badge);
+            }
+            tr.appendChild(tdIp);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdType);
+            tr.appendChild(tdStatut);
+            corps.appendChild(tr);
+        }
+    }
+
+    async function maj() {
+        const rep = await fetch(urlStatut);
+        if (!rep.ok) return;
+        const e = await rep.json();
+        elTotal.textContent = e.checked;
+        if (e.phase) elPhase.textContent = e.phase;
+        if (e.ajoutes !== undefined) elAjoutees.textContent = e.ajoutes;
+        if (e.ignores !== undefined) elIgnorees.textContent = e.ignores;
+        if (e.erreur) {
+            elCarte.querySelector(".resume-valeur").textContent = "Erreur";
+            elCarte.querySelector(".resume-libelle").textContent = e.erreur;
+        }
+        corps.innerHTML = "";
+        afficher(e.resultats || [], new Set(e.existants || []), "Réseau");
+        afficher(e.resultats_wmi || [], new Set(e.existants || []), "USB");
+        elTrouvees.textContent = (e.resultats || []).length + (e.resultats_wmi || []).length;
+        if (e.en_cours) {
+            setTimeout(maj, 1200);
+        } else if (elInfo) {
+            elInfo.textContent = "Scan terminé. " + (e.ajoutes || 0) + " imprimante(s) ajoutée(s), " + (e.ignores || 0) + " ignorée(s) (déjà en base).";
+            elCarte.querySelector(".resume-valeur").textContent = "Terminé";
+        }
+    }
+    afficher({{ etat.resultats | tojson }}, new Set({{ etat.get('existants', []) | tojson }}), "Réseau");
+    afficher({{ etat.get('resultats_wmi', []) | tojson }}, new Set({{ etat.get('existants', []) | tojson }}), "USB");
+    maj();
+</script>
+{% endblock %}

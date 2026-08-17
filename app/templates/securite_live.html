@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block titre %}Vérification sécurité - Anem Parc{% endblock %}
+
+{% block contenu %}
+<div class="page-head">
+  <div>
+    <h2>Vérification de Kaspersky</h2>
+    <p id="statut-texte">Démarrage de la vérification sur {{ etat["total"] }} poste(s)...</p>
+  </div>
+  <div class="page-actions">
+    <a href="{{ url_for('securite.exporter_csv', check_id=etat['check_id']) }}" class="btn" id="btn-export-csv" style="display:none;">↓ Export CSV</a>
+    <a href="{{ url_for('securite.exporter_xlsx', check_id=etat['check_id']) }}" class="btn btn-primary" id="btn-export-xlsx" style="display:none;">↓ Export Excel</a>
+    <a href="{{ url_for('securite.page') }}" class="btn">← Retour</a>
+  </div>
+</div>
+
+<div class="progression">
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="progress-info">
+    <span id="progress-compteur">0 / {{ etat["total"] }}</span>
+  </div>
+</div>
+
+<div class="resume-cards" id="resume-cards">
+  <div class="resume-card"><span class="resume-valeur" id="r-total">0</span><span class="resume-libelle">Postes</span></div>
+  <div class="resume-card ok"><span class="resume-valeur" id="r-avec">0</span><span class="resume-libelle">Avec Kaspersky</span></div>
+  <div class="resume-card"><span class="resume-valeur" id="r-sans">0</span><span class="resume-libelle">Sans Kaspersky</span></div>
+  <div class="resume-card vert"><span class="resume-valeur" id="r-a-jour">0</span><span class="resume-libelle">À jour</span></div>
+  <div class="resume-card rouge"><span class="resume-valeur" id="r-pas-a-jour">0</span><span class="resume-libelle">Pas à jour</span></div>
+  <div class="resume-card gris"><span class="resume-valeur" id="r-injoignables">0</span><span class="resume-libelle">Injoignables</span></div>
+  <div class="resume-card rouge"><span class="resume-valeur" id="r-smb-vuln">0</span><span class="resume-libelle">SMB vulnérables</span></div>
+</div>
+
+<div class="table-wrap scan-results">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Poste</th>
+        <th>Kaspersky installé</th>
+        <th>Actif</th>
+        <th>À jour</th>
+        <th>Version</th>
+        <th>Dernière MAJ</th>
+        <th>Ports ouverts</th>
+        <th>SMB</th>
+        <th>Détail</th>
+      </tr>
+    </thead>
+    <tbody id="resultats-corps"></tbody>
+  </table>
+</div>
+
+<script>
+const CHECK_ID = "{{ etat['check_id'] }}";
+const STATUT_URL = "{{ url_for('securite.statut', check_id=etat['check_id']) }}";
+const corps = document.getElementById("resultats-corps");
+const fill = document.getElementById("progress-fill");
+const compteur = document.getElementById("progress-compteur");
+const statutTexte = document.getElementById("statut-texte");
+
+function echapper(valeur) {
+  return (valeur || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function badge(classe, texte) {
+  return '<span class="badge ' + classe + '">' + texte + '</span>';
+}
+
+function formaterLigne(m) {
+  const k = m.kaspersky;
+  const smb = m.smb || {};
+  let install = badge("badge-gris", "—");
+  let actif = badge("badge-gris", "—");
+  let aJour = badge("badge-gris", "—");
+  let version = "";
+  let maj = "";
+  let ports = "";
+  let smbBadge = "";
+  let detail = "";
+  if (m.erreur) {
+    detail = '<span class="texte-erreur">' + echapper(m.erreur) + '</span>';
+  } else if (k) {
+    install = badge("badge-en-ligne", "Oui");
+    actif = badge(k.actif ? "badge-en-ligne" : "badge-hors-ligne", k.actif ? "Oui" : "Non");
+    aJour = badge(k.a_jour ? "badge-en-ligne" : "badge-hors-ligne", k.a_jour ? "Oui" : "Non");
+    version = echapper(k.version || "—");
+    maj = echapper(k.maj || "—");
+    const autres = m.produits.filter(function (p) { return !p.est_kaspersky; })
+      .map(function (p) { return echapper(p.nom); });
+    detail = autres.length ? "Autres : " + autres.join(", ") : "";
+  } else {
+    install = badge("badge-hors-ligne", "Non");
+    detail = m.produits.map(function (p) { return echapper(p.nom); }).join(", ");
+  }
+
+  if (m.ports && m.ports.length) {
+    ports = m.ports.map(function (p) {
+      return echapper(p.nom) + " <small>(" + p.port + ")</small>";
+    }).join(", ");
+  } else {
+    ports = badge("badge-gris", "—");
+  }
+
+  if (smb.erreur) {
+    smbBadge = badge("badge-gris", "—");
+  } else if (smb.vulnerable) {
+    smbBadge = badge("badge-hors-ligne", "Vulnérable");
+    if (!detail) detail = "SMBv1 actif sans patch MS17-010";
+  } else if (smb.patche) {
+    smbBadge = badge("badge-en-ligne", "OK");
+  } else if (smb.smbv1 === false) {
+    smbBadge = badge("badge-en-ligne", "OK");
+  } else {
+    smbBadge = badge("badge-gris", "—");
+  }
+
+  return "<tr>" +
+    "<td><strong>" + echapper(m.nom) + "</strong></td>" +
+    "<td>" + install + "</td>" +
+    "<td>" + actif + "</td>" +
+    "<td>" + aJour + "</td>" +
+    "<td>" + version + "</td>" +
+    "<td>" + maj + "</td>" +
+    "<td>" + ports + "</td>" +
+    "<td>" + smbBadge + "</td>" +
+    "<td>" + detail + "</td>" +
+    "</tr>";
+}
+
+function actualiser() {
+  fetch(STATUT_URL)
+    .then(function (r) { return r.json(); })
+    .then(function (donnees) {
+      if (donnees.erreur) { statutTexte.textContent = donnees.erreur; return; }
+      compteur.textContent = donnees.checked + " / " + donnees.total;
+      if (donnees.total > 0) {
+        fill.style.width = Math.round(donnees.checked * 100 / donnees.total) + "%";
+      }
+      corps.innerHTML = donnees.machines.map(formaterLigne).join("");
+
+      const r = donnees.resume || {};
+      document.getElementById("r-total").textContent = r.total || 0;
+      document.getElementById("r-avec").textContent = r.avec_kaspersky || 0;
+      document.getElementById("r-sans").textContent = r.sans || 0;
+      document.getElementById("r-a-jour").textContent = r.a_jour || 0;
+      document.getElementById("r-pas-a-jour").textContent = r.pas_a_jour || 0;
+      document.getElementById("r-injoignables").textContent = r.injoignables || 0;
+      document.getElementById("r-smb-vuln").textContent = r.smb_vulnerables || 0;
+
+      if (donnees.en_cours) {
+        statutTexte.textContent = "Vérification en cours, les résultats s'affichent automatiquement...";
+        setTimeout(actualiser, 800);
+      } else {
+        document.getElementById("btn-export-csv").style.display = "";
+        document.getElementById("btn-export-xlsx").style.display = "";
+        if (donnees.erreur) {
+          statutTexte.textContent = "Erreur : " + donnees.erreur;
+        } else {
+          statutTexte.textContent = "Vérification terminée.";
+        }
+        fill.style.width = "100%";
+      }
+    })
+    .catch(function () {
+      statutTexte.textContent = "Connexion perdue, nouvel essai...";
+      setTimeout(actualiser, 1500);
+    });
+}
+
+actualiser();
+</script>
+{% endblock %}

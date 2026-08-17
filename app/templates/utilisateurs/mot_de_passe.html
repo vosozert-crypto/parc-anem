@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titre %}Changer mon mot de passe - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Changer mon mot de passe</h2>
+    <p>Connecté en tant que {{ session.get('nom') }}.</p>
+  </div>
+  <a href="{{ url_for('main.index') }}" class="btn">← Retour à l'accueil</a>
+</section>
+
+<form method="post" class="form">
+  <div class="form-row">
+    <label for="actuel">Mot de passe actuel</label>
+    <input type="password" id="actuel" name="actuel" required>
+  </div>
+  <div class="form-row">
+    <label for="nouveau">Nouveau mot de passe</label>
+    <input type="password" id="nouveau" name="nouveau" required minlength="6">
+  </div>
+  <div class="form-row">
+    <label for="confirmation">Confirmation</label>
+    <input type="password" id="confirmation" name="confirmation" required minlength="6">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Changer le mot de passe</button>
+    <a href="{{ url_for('main.index') }}" class="btn">Annuler</a>
+  </div>
+</form>
+{% endblock %}

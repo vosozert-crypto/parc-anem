@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block titre %}Découvrir les imprimantes - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Découvrir les imprimantes</h2>
+    <p>Imprimantes détectées via WMI sur les postes de l'inventaire. Ajoutez celles à suivre.</p>
+  </div>
+  <a href="{{ url_for('imprimantes.liste') }}" class="btn">← Retour à la liste</a>
+</section>
+
+{% if erreurs %}
+<div class="alert alert-warning">
+  <strong>{{ erreurs|length }} poste(s) injoignable(s) via WMI :</strong>
+  <ul>
+    {% for nom, erreur in erreurs %}
+    <li>{{ nom }} — {{ erreur }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if trouves %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Imprimante</th>
+        <th>Partage</th>
+        <th>Port</th>
+        <th>Poste source</th>
+        <th class="col-actions">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nom, p in trouves.items() %}
+      <tr>
+        <td><strong>{{ nom }}</strong></td>
+        <td>{{ p["partage"] or "—" }}</td>
+        <td>{{ p["port"] or "—" }}</td>
+        <td>{{ p["source"] }}</td>
+        <td class="col-actions">
+          {% if nom in existants %}
+          <span class="badge badge-en-ligne">Déjà enregistrée</span>
+          {% else %}
+          <form method="post" action="{{ url_for('imprimantes.decouvrir_ajouter') }}">
+            <input type="hidden" name="nom" value="{{ nom }}">
+            <input type="hidden" name="port" value="{{ p['port'] }}">
+            <input type="hidden" name="source" value="{{ p['source'] }}">
+            <button type="submit" class="btn btn-small">+ Ajouter</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Aucune imprimante détectée sur les postes de l'inventaire (vérifiez le pare-feu/WMI).</p>
+  <a href="{{ url_for('imprimantes.ajouter') }}" class="btn btn-primary">Ajouter à la main</a>
+</div>
+{% endif %}
+{% endblock %}

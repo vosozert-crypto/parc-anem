@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block titre %}Scan réseau imprimantes - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Scan imprimantes (réseau + USB)</h2>
+    <p>Recherche les imprimantes réseau (ports 515/631/9100 + SNMP) et les imprimantes USB connectées aux postes (WMI). Les nouvelles sont ajoutées automatiquement.</p>
+  </div>
+  <a href="{{ url_for('imprimantes.liste') }}" class="btn">← Liste imprimantes</a>
+</section>
+
+{% if cidr_actuel %}
+<p class="info-cidr">Réseau détecté : <code>{{ cidr_actuel }}</code></p>
+{% endif %}
+
+<form method="post" class="form scan-form">
+  <div class="form-row">
+    <label for="plage">Plage réseau</label>
+    <input type="text" id="plage" name="plage" value="{{ cidr_actuel }}" placeholder="192.168.1.0/24">
+  </div>
+  <div class="form-row">
+    <label for="parallelisme">Vérifications simultanées</label>
+    <input type="number" id="parallelisme" name="parallelisme" value="50" min="1" max="200">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Scanner le réseau</button>
+  </div>
+</form>
+{% endblock %}

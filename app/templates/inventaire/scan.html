@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block titre %}Scan réseau - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Scan réseau</h2>
+    <p>Collecte automatique des postes et de leurs caractéristiques via WMI.</p>
+  </div>
+  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+</section>
+
+<form method="post" class="form scan-form">
+  <div class="form-row">
+    <label for="plage">Plage réseau (CIDR)</label>
+    <input type="text" id="plage" name="plage" value="{{ cidr_actuel }}" placeholder="ex : 192.168.1.0/24">
+    <small>Détection automatique : <strong>{{ cidr_actuel or "aucune" }}</strong>. Laissez vide pour utiliser la plage détectée.</small>
+  </div>
+  <div class="form-row">
+    <label for="parallelisme">Scans simultanés</label>
+    <input type="number" id="parallelisme" name="parallelisme" value="{{ parallelisme or 50 }}" min="1" max="200">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Démarrer le scan</button>
+    <a href="{{ url_for('inventaire.liste') }}" class="btn">Annuler</a>
+  </div>
+</form>
+{% endblock %}

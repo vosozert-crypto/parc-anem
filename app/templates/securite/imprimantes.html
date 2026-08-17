@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block titre %}Scan imprimantes réseau{% endblock %}
+
+{% block contenu %}
+<h1>Imprimantes réseau</h1>
+<p class="sous-titre">
+    Scanne la plage réseau pour détecter les imprimantes (ports 515, 631, 9100) et
+    récupère leur description via SNMP.
+</p>
+
+{% if cidr_actuel %}
+<p class="info-cidr">Réseau détecté : <code>{{ cidr_actuel }}</code></p>
+{% endif %}
+
+<form method="post" class="form-ligne">
+    <label for="plage">Plage réseau :</label>
+    <input type="text" id="plage" name="plage" value="{{ cidr_actuel }}" placeholder="192.168.1.0/24">
+    <label for="parallelisme">Parallélisme :</label>
+    <input type="number" id="parallelisme" name="parallelisme" value="50" min="1" max="200">
+    <button type="submit" class="btn btn-primaire">Scanner</button>
+</form>
+
+<p class="retour"><a href="{{ url_for('securite.page') }}">&larr; Retour à la sécurité</a></p>
+{% endblock %}

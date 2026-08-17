@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block titre %}Scan en cours - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Scan de {{ etat["plage"] }}</h2>
+    <p id="statut-texte">Démarrage du scan...</p>
+  </div>
+  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+</section>
+
+<div class="progression">
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+  <div class="progress-info">
+    <span id="progress-compteur">0 / {{ etat["total"] }} adresses</span>
+    <span id="progress-trouvees">0 trouvée(s)</span>
+  </div>
+</div>
+
+<div class="table-wrap scan-results">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>N° série</th>
+        <th>Marque / Modèle</th>
+        <th>Processeur</th>
+        <th>RAM</th>
+        <th>Disque</th>
+        <th>OS</th>
+        <th>Session</th>
+      </tr>
+    </thead>
+    <tbody id="resultats-corps"></tbody>
+  </table>
+</div>
+
+<script>
+const SCAN_ID = "{{ etat['scan_id'] }}";
+const STATUT_URL = "{{ url_for('inventaire.statut', scan_id=etat['scan_id']) }}";
+const LISTE_URL = "{{ url_for('inventaire.liste') }}";
+const corps = document.getElementById("resultats-corps");
+const fill = document.getElementById("progress-fill");
+const compteur = document.getElementById("progress-compteur");
+const trouvees = document.getElementById("progress-trouvees");
+const statutTexte = document.getElementById("statut-texte");
+let termine = false;
+
+function echapper(valeur) {
+  return (valeur || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function formaterLigne(m) {
+  return "<tr>" +
+    "<td><strong>" + echapper(m.nom) + "</strong></td>" +
+    "<td>" + echapper(m.numero_serie) + "</td>" +
+    "<td>" + echapper(m.marque_modele) + "</td>" +
+    "<td>" + echapper(m.processeur) + "</td>" +
+    "<td>" + echapper(m.ram_go) + "</td>" +
+    "<td>" + echapper(m.disque) + "</td>" +
+    "<td>" + echapper(m.arch) + "</td>" +
+    "<td>" + echapper(m.user_session) + "</td>" +
+    "</tr>";
+}
+
+function actualiser() {
+  fetch(STATUT_URL)
+    .then(function (r) { return r.json(); })
+    .then(function (donnees) {
+      if (donnees.erreur) {
+        statutTexte.textContent = donnees.erreur;
+        return;
+      }
+      compteur.textContent = donnees.scanned + " / " + donnees.total + " adresses";
+      trouvees.textContent = donnees.found + " trouvée(s)";
+      if (donnees.total > 0) {
+        fill.style.width = Math.round(donnees.scanned * 100 / donnees.total) + "%";
+      }
+      corps.innerHTML = donnees.machines.map(formaterLigne).join("");
+
+      if (donnees.en_cours) {
+        statutTexte.textContent = "Scan en cours, les postes trouvés s'affichent automatiquement...";
+        setTimeout(actualiser, 800);
+      } else {
+        termine = true;
+        if (donnees.erreur) {
+          statutTexte.textContent = "Erreur : " + donnees.erreur;
+        } else {
+          statutTexte.textContent = "Scan terminé : " + donnees.found + " poste(s) trouvé(s), " +
+            donnees.ajoutes + " ajouté(s), " + donnees.ignores + " déjà enregistré(s).";
+        }
+        fill.style.width = "100%";
+        setTimeout(function () { window.location.href = LISTE_URL; }, 2500);
+      }
+    })
+    .catch(function () {
+      statutTexte.textContent = "Connexion au scan perdue, nouvel essai...";
+      setTimeout(actualiser, 1500);
+    });
+}
+
+actualiser();
+</script>
+{% endblock %}

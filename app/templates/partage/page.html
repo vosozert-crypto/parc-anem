@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block titre %}Partage consommable informatique - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div class="entete-fichier">
+    <div class="entete-ligne">
+      <span class="entete-annee">Année..........:</span>
+      <form method="get" action="{{ url_for('partage.page') }}" class="entete-form">
+        <select id="annee" name="annee" onchange="this.form.submit()">
+          {% for a in annees %}
+          <option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    <div class="entete-ligne">Partage consommable informatique :</div>
+    <div class="entete-ligne">
+      <span>Administrateur/consolide</span>
+      <span class="entete-partage">partage</span>
+    </div>
+  </div>
+</section>
+
+<div class="form-actions" style="margin-bottom: 0.5rem;">
+  <form method="post" action="{{ url_for('partage.importer_besoins', annee=annee) }}" style="display:inline;">
+    <button type="submit" class="btn" onclick="return confirm('Importer le partage depuis les besoins {{ annee }} ? Les données existantes seront écrasées.');">Importer depuis les besoins</button>
+  </form>
+  <span class="info">2 possibilités : importer depuis les besoins, ou saisir manuellement les totaux (auto-somme).</span>
+</div>
+
+<form method="post" id="form-partage" action="{{ url_for('partage.annee', annee=annee) }}">
+  <div class="table-wrap">
+    <table class="table" id="table-partage">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Désignation</th>
+          <th>Qte acheté</th>
+          <th>Partage total</th>
+          {% for site in sites %}
+          <th>{{ site | site_code }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr data-id="{{ it['id'] }}">
+          <td>{{ loop.index }}</td>
+          <td class="desig">{{ it["designation"] }}</td>
+          <td><input type="number" name="qte_{{ it['id'] }}" value="{{ it['qte_achetee'] }}" min="0" class="qte"></td>
+          <td><input type="number" name="partage_{{ it['id'] }}" value="{{ it['partage_total'] }}" min="0" class="partage" data-row="{{ it['id'] }}"></td>
+          {% for i in range(sites|length) %}
+          <td><input type="number" name="site_{{ it['id'] }}_{{ i }}" value="{{ it['par_site'][i] }}" min="0" class="site" data-row="{{ it['id'] }}"></td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('partage.exporter_csv', annee=annee) }}" class="btn">Export CSV</a>
+    <a href="{{ url_for('partage.exporter_xlsx', annee=annee) }}" class="btn">Export Excel</a>
+  </div>
+</form>
+
+<hr>
+
+<form method="post" action="{{ url_for('partage.ajouter', annee=annee) }}" class="form form-ligne">
+  <label for="designation"><strong>Ajouter une désignation</strong> :</label>
+  <input type="text" name="designation" id="designation" placeholder="ex : Tonner XEROX 3435" required>
+  <button type="submit" class="btn">Ajouter</button>
+</form>
+
+<script>
+(function () {
+  function autoSomme(rowId) {
+    var total = 0;
+    document.querySelectorAll('input.site[data-row="' + rowId + '"]').forEach(function (champ) {
+      total += parseInt(champ.value) || 0;
+    });
+    var partage = document.querySelector('input[name="partage_' + rowId + '"]');
+    if (partage) partage.value = total;
+  }
+  document.querySelectorAll('input.site').forEach(function (champ) {
+    champ.addEventListener('input', function () {
+      autoSomme(champ.dataset.row);
+    });
+  });
+  document.querySelectorAll('input.site').forEach(function (champ) {
+    autoSomme(champ.dataset.row);
+  });
+})();
+</script>
+{% endblock %}

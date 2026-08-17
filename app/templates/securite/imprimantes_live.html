@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block titre %}Scan imprimantes réseau{% endblock %}
+
+{% block contenu %}
+<h1>Scan imprimantes réseau</h1>
+
+<div class="resume-cards">
+    <div class="resume-card">
+        <div class="resume-valeur" id="totale">{{ etat.checked }}</div>
+        <div class="resume-libelle">Adresses vérifiées</div>
+    </div>
+    <div class="resume-card">
+        <div class="resume-valeur" id="trouvees">0</div>
+        <div class="resume-libelle">Imprimantes trouvées</div>
+    </div>
+    <div class="resume-card" id="carte-statut">
+        <div class="resume-valeur">{% if etat.en_cours %}En cours…{% else %}Terminé{% endif %}</div>
+        <div class="resume-libelle">Statut</div>
+    </div>
+</div>
+
+<table class="table" id="table-resultats">
+    <thead>
+        <tr>
+            <th>IP</th>
+            <th>Description (SNMP)</th>
+        </tr>
+    </thead>
+    <tbody id="lignes-resultats">
+    </tbody>
+</table>
+
+{% if etat.en_cours %}
+<p class="info" id="info-scan">Scan en cours…</p>
+{% endif %}
+
+<p class="retour"><a href="{{ url_for('securite.imprimantes') }}">&larr; Nouveau scan</a></p>
+
+<script>
+    const scanId = "{{ etat.scan_id }}";
+    const urlStatut = "{{ url_for('securite.statut_imprimantes', scan_id=etat.scan_id) }}";
+    const corps = document.getElementById("lignes-resultats");
+    const elTotal = document.getElementById("totale");
+    const elTrouvees = document.getElementById("trouvees");
+    const elCarte = document.getElementById("carte-statut");
+    const elInfo = document.getElementById("info-scan");
+
+    function afficher(resultats) {
+        corps.innerHTML = "";
+        for (const p of resultats) {
+            const tr = document.createElement("tr");
+            const tdIp = document.createElement("td");
+            tdIp.textContent = p.ip;
+            const tdDesc = document.createElement("td");
+            tdDesc.textContent = p.description || "—";
+            tr.appendChild(tdIp);
+            tr.appendChild(tdDesc);
+            corps.appendChild(tr);
+        }
+        elTrouvees.textContent = resultats.length;
+    }
+
+    async function maj() {
+        const rep = await fetch(urlStatut);
+        if (!rep.ok) return;
+        const e = await rep.json();
+        elTotal.textContent = e.checked;
+        if (e.erreur) {
+            elCarte.querySelector(".resume-valeur").textContent = "Erreur";
+            elCarte.querySelector(".resume-libelle").textContent = e.erreur;
+        }
+        afficher(e.resultats || []);
+        if (e.en_cours) {
+            setTimeout(maj, 1200);
+        } else if (elInfo) {
+            elInfo.textContent = "Scan terminé.";
+            elCarte.querySelector(".resume-valeur").textContent = "Terminé";
+        }
+    }
+    afficher({{ etat.resultats | tojson }});
+    maj();
+</script>
+{% endblock %}

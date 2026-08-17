@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block titre %}Périphériques USB actifs{% endblock %}
+
+{% block contenu %}
+<h1>Périphériques USB actifs</h1>
+<p class="sous-titre">
+    Liste les périphériques USB (classe USB) connectés et actifs sur chaque machine
+    de l'inventaire, via WMI.
+</p>
+
+<form method="post" class="form-ligne">
+    <label for="parallelisme">Parallélisme :</label>
+    <input type="number" id="parallelisme" name="parallelisme" value="20" min="1" max="100">
+    <button type="submit" class="btn btn-primaire">Scanner les machines</button>
+</form>
+
+<p class="retour"><a href="{{ url_for('securite.page') }}">&larr; Retour à la sécurité</a></p>
+{% endblock %}

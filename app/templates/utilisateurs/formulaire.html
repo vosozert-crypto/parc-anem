@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block titre %}{{ titre }} - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>{{ titre }}</h2>
+    <p>Le mot de passe n'est modifié que s'il est renseigné.</p>
+  </div>
+  <a href="{{ url_for('utilisateurs.liste') }}" class="btn">← Retour à la liste</a>
+</section>
+
+<form method="post" class="form">
+  <div class="form-row">
+    <label for="nom">Nom complet *</label>
+    <input type="text" id="nom" name="nom" value="{{ user.get('nom', '') if user else '' }}" required>
+  </div>
+  <div class="form-row">
+    <label for="email">Adresse email (identifiant) *</label>
+    <input type="email" id="email" name="email" value="{{ user.get('email', '') if user else '' }}" required>
+  </div>
+  <div class="form-row">
+    <label for="role">Rôle</label>
+    <select id="role" name="role">
+      <option value="user" {% if user and user['role'] == 'user' %}selected{% endif %}>Utilisateur</option>
+      <option value="admin" {% if user and user['role'] == 'admin' %}selected{% endif %}>Administrateur</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="site">AWEM/ALEM (pour le besoin consommables)</label>
+    <select id="site" name="site">
+      <option value="">— Non affecté —</option>
+      {% for s in sites %}
+      <option value="{{ s }}" {% if user and user['site'] == s %}selected{% endif %}>{{ s | site_code }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="mot_de_passe">Mot de passe {% if not user %}*{% endif %}</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe" placeholder="{% if user %}Laisser vide pour conserver{% else %}Minimum 6 caractères{% endif %}">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('utilisateurs.liste') }}" class="btn">Annuler</a>
+  </div>
+</form>
+{% endblock %}

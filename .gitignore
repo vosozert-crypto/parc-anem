@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+
+*.db
+*.log
+*.err
+
+~$*.xlsx
+cloudflared.exe
+tunnel.log
+tunnel.err
+us_ps.txt
+
+.venv/
+venv/
+.env

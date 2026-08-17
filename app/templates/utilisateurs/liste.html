@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block titre %}Utilisateurs - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Gestion des utilisateurs</h2>
+    <p>{{ utilisateurs|length }} compte(s) enregistré(s).</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('utilisateurs.ajouter') }}" class="btn btn-primary">+ Ajouter un utilisateur</a>
+  </div>
+</section>
+
+{% if utilisateurs %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Email (identifiant)</th>
+        <th>Rôle</th>
+        <th>AWEM/ALEM</th>
+        <th>Créé le</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in utilisateurs %}
+      <tr>
+        <td><strong>{{ u["nom"] }}</strong>{% if u["id"] == moi %} <span class="badge badge-en-ligne">vous</span>{% endif %}</td>
+        <td>{{ u["email"] }}</td>
+        <td>{% if u["role"] == "admin" %}<span class="badge badge-en-ligne">Admin</span>{% else %}<span class="badge badge-gris">User</span>{% endif %}</td>
+        <td>{{ (u["site"] or "") | site_code or "—" }}</td>
+        <td>{{ u["date_ajout"][:10] if u["date_ajout"] else "—" }}</td>
+        <td class="col-actions">
+          <div class="btn-group">
+            <a href="{{ url_for('utilisateurs.modifier', uid=u['id']) }}" class="btn btn-small">Modifier</a>
+            {% if u["id"] != moi %}
+            <form method="post" action="{{ url_for('utilisateurs.supprimer', uid=u['id']) }}" onsubmit="return confirm('Supprimer le compte « {{ u['nom'] }} » ?');">
+              <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Aucun utilisateur.</p>
+</div>
+{% endif %}
+{% endblock %}

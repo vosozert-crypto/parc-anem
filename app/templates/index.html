@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block titre %}Accueil - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="hero">
+  <h2>Bienvenue, {{ nom }} !</h2>
+  <p>Tableau statistique du parc informatique.</p>
+</section>
+
+<section class="cards">
+  <a href="{{ url_for('inventaire.liste') }}" class="card">
+    <h3>Inventaire</h3>
+    <p>Gérer les postes du parc informatique.</p>
+  </a>
+</section>
+
+<div class="onglets">
+  <button type="button" class="onglet active" data-cible="accueil-inventaire">Inventaire</button>
+  <button type="button" class="onglet" data-cible="accueil-imprimantes">Imprimantes</button>
+  <button type="button" class="onglet" data-cible="accueil-besoins">Besoin consommables</button>
+  {% if is_admin %}
+  <button type="button" class="onglet" data-cible="accueil-partage">Partage consommables</button>
+  {% endif %}
+</div>
+
+<div id="accueil-inventaire" class="volet">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type d'équipement</th>
+          <th>Total</th>
+          <th>Postes concernés</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in stats.inventaire.par_type %}
+        <tr>
+          <td><strong>{{ r["type"] or "Non renseigné" }}</strong></td>
+          <td><strong>{{ r["total"] }}</strong></td>
+          <td class="desig">{{ r["details"] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total général</th>
+          <th>{{ stats.inventaire.total }}</th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<div id="accueil-imprimantes" class="volet" hidden>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type imprimante</th>
+          <th>Réf. toner</th>
+          <th>Total</th>
+          <th>Imprimantes concernées</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in stats.imprimantes.par_type %}
+        <tr>
+          <td><strong>{{ r["type"] or "Non renseigné" }}</strong></td>
+          <td>{{ r["ref"] }}</td>
+          <td><strong>{{ r["total"] }}</strong></td>
+          <td class="desig">{{ r["details"] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total général</th>
+          <th></th>
+          <th>{{ stats.imprimantes.total }}</th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% if stats.imprimantes.stock_faible %}
+  <h4 class="stats-sous-titre">Stock toner faible (≤ 2)</h4>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Imprimante</th>
+          <th>Modèle</th>
+          <th>Réf. toner</th>
+          <th>Stock</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in stats.imprimantes.stock_faible %}
+        <tr>
+          <td><strong>{{ r["nom"] }}</strong></td>
+          <td>{{ r["marque_modele"] }}</td>
+          <td>{{ r["reference_toner"] }}</td>
+          <td>{{ r["stock_toner"] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<div id="accueil-besoins" class="volet" hidden>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Réf. toner / type imprimante</th>
+          {% for site in stats.besoins.sites_groupes|reverse %}
+          <th>{{ site | site_code }}</th>
+          {% endfor %}
+          <th>Total</th>
+          <th>Nb AWEM/ALEM</th>
+          <th>Imprimantes concernées</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in stats.besoins.groupes %}
+        <tr>
+          <td><strong>{{ g["groupe"] }}</strong></td>
+          {% for site in stats.besoins.sites_groupes|reverse %}
+          <td>{% if g["par_site"].get(site) %}{{ g["par_site"][site] }}{% else %}0{% endif %}</td>
+          {% endfor %}
+          <td><strong>{{ g["total"] }}</strong></td>
+          <td>{{ g["nb_sites"] }}</td>
+          <td class="desig">{{ g["designations"] | join(", ") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total général</th>
+          {% for t in stats.besoins.totaux_groupes|reverse %}
+          <th>{{ t }}</th>
+          {% endfor %}
+          <th>{{ stats.besoins.total }}</th>
+          <th colspan="2"></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+{% if is_admin and stats.partage %}
+<div id="accueil-partage" class="volet" hidden>
+  <div class="cards" style="margin-bottom: 1rem;">
+    <div class="card"><h3>Articles</h3><p><strong>{{ stats.partage.nb_items }}</strong> au catalogue</p></div>
+    <div class="card"><h3>Saisis</h3><p><strong>{{ stats.partage.nb_saisis }}</strong> articles renseignés</p></div>
+    <div class="card"><h3>Quantité achetée</h3><p><strong>{{ stats.partage.total_qte }}</strong></p></div>
+    <div class="card"><h3>Total partagé</h3><p><strong>{{ stats.partage.total_partage }}</strong></p></div>
+    <div class="card"><h3>AWEM/ALEM</h3><p><strong>{{ stats.partage.total_sites }}</strong> parts distribuées</p></div>
+  </div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Désignation</th>
+          <th>Qte achetée</th>
+          <th>Partage total</th>
+          {% for site in stats.partage.sites %}
+          <th>{{ site }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in stats.partage.lignes %}
+        <tr>
+          <td class="desig">{{ i.designation }}</td>
+          <td>{{ i.qte_achetee or '' }}</td>
+          <td>{{ i.partage_total or '' }}</td>
+          {% for site in stats.partage.sites %}
+          <td>{% if i.par_site[loop.index0] %}{{ i.par_site[loop.index0] }}{% endif %}</td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  document.querySelectorAll(".onglet").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".onglet").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".volet").forEach(function (v) { v.hidden = true; });
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.cible).hidden = false;
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block titre %}{{ titre }} - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>{{ titre }}</h2>
+    <p>Référence toner, stock et état de la cartouche (niveau en % lisible via SNMP si l'adresse IP est renseignée).</p>
+  </div>
+  <a href="{{ url_for('imprimantes.liste') }}" class="btn">← Retour à la liste</a>
+</section>
+
+<form method="post" class="form">
+  {% for champ, label in champs %}
+  <div class="form-row">
+    <label for="{{ champ }}">{{ label }}{% if champ == "nom" %} *{% endif %}</label>
+    {% if champ == "stock_toner" %}
+    <input type="number" id="{{ champ }}" name="{{ champ }}" value="{{ imp.get(champ, 0) if imp else 0 }}" min="0">
+    {% else %}
+    <input type="text" id="{{ champ }}" name="{{ champ }}" value="{{ imp.get(champ, '') if imp else '' }}" {% if champ == "nom" %}required{% endif %}>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('imprimantes.liste') }}" class="btn">Annuler</a>
+  </div>
+</form>
+{% endblock %}

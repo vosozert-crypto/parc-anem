@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block titre %}Besoin {{ annee }} - {{ site }} - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Besoin en consommable informatique — {{ annee }}</h2>
+    <p>AWEM/ALEM : <strong>{{ site | site_code }}</strong> — renseignez le stock, le besoin et l'état pour chaque imprimante.</p>
+  </div>
+  <div class="btn-group">
+    {% if role == 'admin' %}
+    <a href="{{ url_for('besoins.annee', annee=annee) }}" class="btn">← Vue globale</a>
+    {% else %}
+    <a href="{{ url_for('besoins.page') }}" class="btn">← Accueil</a>
+    {% endif %}
+  </div>
+</section>
+
+<form method="post" class="form">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Désignation imprimante</th>
+          <th>Réf. toner</th>
+          <th>Stock</th>
+          <th>Besoin</th>
+          <th>État de l'imprimante</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ it["designation"] }}</td>
+          <td>{{ it["ref_toner"] or "—" }}</td>
+          <td><input type="text" name="stock_{{ it['id'] }}" value="{{ it['stock'] }}" placeholder="ex : 8 paquets X 4"></td>
+          <td><input type="number" name="besoin_{{ it['id'] }}" value="{{ it['besoin'] }}" min="0"></td>
+          <td>
+            <select name="etat_{{ it['id'] }}">
+              <option value="">—</option>
+              {% if it['etat'] and it['etat'] not in etats %}
+              <option value="{{ it['etat'] }}" selected>{{ it['etat'] }}</option>
+              {% endif %}
+              {% for e in etats %}
+              <option value="{{ e }}" {% if it['etat'] == e %}selected{% endif %}>{{ e }}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if items %}
+  <p class="info">Dernière modification : {{ items[0]["date_maj"][:16] if items[0]["date_maj"] else "jamais" }}.</p>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer les besoins</button>
+    {% if role == 'admin' %}
+    <a href="{{ url_for('besoins.annee', annee=annee) }}" class="btn">Annuler</a>
+    {% else %}
+    <a href="{{ url_for('besoins.page') }}" class="btn">Annuler</a>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="empty-state"><p>Aucune imprimante référencée pour cet AWEM/ALEM.</p></div>
+  {% endif %}
+</form>
+{% endblock %}

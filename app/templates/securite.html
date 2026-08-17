@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block titre %}Sécurité - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Sécurité du parc</h2>
+    <p>Vérification de Kaspersky (installé, actif, à jour, version), des ports ouverts et de la vulnérabilité SMB (SMBv1 + patch MS17-010) sur chaque poste de l'inventaire.</p>
+  </div>
+  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Inventaire</a>
+</section>
+
+{% if aucun %}
+<div class="empty-state">
+  <p>L'inventaire est vide. Lancez d'abord un scan réseau pour remplir le parc.</p>
+  <a href="{{ url_for('inventaire.scan') }}" class="btn btn-primary">Scan réseau</a>
+</div>
+{% else %}
+<form method="post" class="form scan-form">
+  <div class="form-row">
+    <label for="parallelisme">Vérifications simultanées</label>
+    <input type="number" id="parallelisme" name="parallelisme" value="50" min="1" max="200">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Lancer la vérification</button>
+  </div>
+</form>
+{% endif %}
+
+<section class="outils-securite">
+  <h3>Autres scans</h3>
+  <div class="outils-grille">
+    <div class="outil-carte">
+      <h4>Imprimantes réseau</h4>
+      <p>Détecte les imprimantes sur la plage réseau (ports 515/631/9100) et lit leur description SNMP.</p>
+      <a href="{{ url_for('securite.imprimantes') }}" class="btn">Scanner les imprimantes</a>
+    </div>
+    <div class="outil-carte">
+      <h4>Périphériques USB actifs</h4>
+      <p>Liste les périphériques USB connectés et actifs sur chaque machine de l'inventaire.</p>
+      <a href="{{ url_for('securite.usb') }}" class="btn">Scanner les USB</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

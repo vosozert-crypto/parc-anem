@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block titre %}Inventaire - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Inventaire du parc</h2>
+    <p>{{ machines|length }} poste(s) enregistré(s).</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('inventaire.scan') }}" class="btn btn-primary">Scan réseau</a>
+    <a href="{{ url_for('inventaire.exporter_csv') }}" class="btn">CSV</a>
+    <a href="{{ url_for('inventaire.exporter_xlsx') }}" class="btn">Excel</a>
+    <a href="{{ url_for('inventaire.ajouter') }}" class="btn">+ Ajouter</a>
+  </div>
+</section>
+
+{% if machines %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>État</th>
+        <th>Nom</th>
+        <th>N° série</th>
+        <th>Marque / Modèle</th>
+        <th>Processeur</th>
+        <th>RAM</th>
+        <th>Disque</th>
+        <th>OS</th>
+        <th>Session</th>
+        <th>Ajouté le</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in machines %}
+      <tr id="ligne-{{ m['id'] }}">
+        <td>
+          <span class="badge badge-attente" id="etat-{{ m['id'] }}" data-nom="{{ m['nom'] }}">…</span>
+        </td>
+        <td><strong>{{ m["nom"] }}</strong></td>
+        <td>{{ m["numero_serie"] }}</td>
+        <td>{{ m["marque_modele"] }}</td>
+        <td>{{ m["processeur"] }}{% if m["generation"] %} <small>({{ m["generation"] }})</small>{% endif %}</td>
+        <td>{{ m["ram_go"] }}</td>
+        <td>{{ m["disque"] }}</td>
+        <td>{{ m["arch"] }}</td>
+        <td>{{ m["user_session"] or "—" }}</td>
+        <td>{{ m["date_ajout"][:10] }}</td>
+        <td class="col-actions">
+          <div class="dropdown" id="menu-{{ m['id'] }}">
+            <button type="button" class="btn btn-small dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Actions ▾</button>
+            <div class="dropdown-menu" role="menu">
+              <button type="button" class="dropdown-item action-ping" data-id="{{ m['id'] }}">Ping</button>
+              <button type="button" class="dropdown-item action-rdp" data-id="{{ m['id'] }}">Bureau à distance (RDP)</button>
+              <button type="button" class="dropdown-item action-msg" data-id="{{ m['id'] }}">Envoyer un message</button>
+              <a href="{{ url_for('inventaire.imprimantes', mid=m['id']) }}" class="dropdown-item">Imprimantes</a>
+              <a href="{{ url_for('inventaire.modifier', mid=m['id']) }}" class="dropdown-item">Modifier</a>
+              <form method="post" action="{{ url_for('inventaire.supprimer', mid=m['id']) }}" onsubmit="return confirm('Supprimer le poste « {{ m['nom'] }} » ?');">
+                <button type="submit" class="dropdown-item dropdown-danger">Supprimer</button>
+              </form>
+            </div>
+          </div>
+          <span class="action-retour" id="retour-{{ m['id'] }}"></span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Aucun poste dans l'inventaire pour le moment.</p>
+  <a href="{{ url_for('inventaire.ajouter') }}" class="btn btn-primary">Ajouter le premier poste</a>
+</div>
+{% endif %}
+
+<script>
+const STATUT_URL = "{{ url_for('inventaire.statut_machine', mid=0) }}".replace("/0", "/");
+const RDP_URL = "{{ url_for('inventaire.rdp', mid=0) }}".replace("/0", "/");
+const MSG_URL = "{{ url_for('inventaire.message', mid=0) }}".replace("/0", "/");
+
+function echoJS(valeur) {
+  return (valeur || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function fermerMenus(sauf) {
+  document.querySelectorAll(".dropdown.open").forEach(function (d) {
+    if (d !== sauf) {
+      d.classList.remove("open");
+      const t = d.querySelector(".dropdown-toggle");
+      if (t) { t.setAttribute("aria-expanded", "false"); }
+    }
+  });
+}
+
+document.querySelectorAll(".dropdown-toggle").forEach(function (btn) {
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    const d = btn.closest(".dropdown");
+    const ouvert = d.classList.toggle("open");
+    btn.setAttribute("aria-expanded", ouvert ? "true" : "false");
+    fermerMenus(d);
+  });
+});
+
+document.addEventListener("click", function () {
+  fermerMenus(null);
+});
+
+function badgeEtat(id, enLigne, latence) {
+  const badge = document.getElementById("etat-" + id);
+  if (enLigne) {
+    badge.className = "badge badge-en-ligne";
+    badge.textContent = "● En ligne" + (latence != null ? " (" + latence + " ms)" : "");
+  } else {
+    badge.className = "badge badge-hors-ligne";
+    badge.textContent = "○ Hors ligne";
+  }
+}
+
+function afficherRetour(id, message, ok) {
+  const zone = document.getElementById("retour-" + id);
+  zone.textContent = message;
+  zone.className = "action-retour " + (ok ? "retour-ok" : "retour-erreur");
+  setTimeout(function () { zone.textContent = ""; zone.className = "action-retour"; }, 5000);
+}
+
+document.querySelectorAll(".badge-attente").forEach(function (badge) {
+  const id = badge.id.replace("etat-", "");
+  const nom = encodeURIComponent(badge.dataset.nom);
+  fetch(STATUT_URL + id)
+    .then(function (r) { return r.json(); })
+    .then(function (d) { badgeEtat(id, d.en_ligne, d.latence_ms); })
+    .catch(function () { badgeEtat(id, false, null); });
+});
+
+document.querySelectorAll(".action-ping").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    const id = btn.dataset.id;
+    afficherRetour(id, "Ping en cours...", true);
+    fetch(STATUT_URL + id)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.erreur) { afficherRetour(id, d.erreur, false); return; }
+        badgeEtat(id, d.en_ligne, d.latence_ms);
+        afficherRetour(id, d.en_ligne ? "Ping OK (" + d.latence_ms + " ms)" : "Pas de réponse", d.en_ligne);
+      })
+      .catch(function () { afficherRetour(id, "Erreur de ping", false); });
+  });
+});
+
+document.querySelectorAll(".action-rdp").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    const id = btn.dataset.id;
+    afficherRetour(id, "Connexion RDP...", true);
+    fetch(RDP_URL + id, { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        afficherRetour(id, d.ok ? d.message : d.erreur, d.ok);
+      })
+      .catch(function () { afficherRetour(id, "Erreur RDP", false); });
+  });
+});
+
+document.querySelectorAll(".action-msg").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    const id = btn.dataset.id;
+    const texte = window.prompt("Message à envoyer au poste :");
+    if (texte === null || texte.trim() === "") { return; }
+    const corps = new URLSearchParams();
+    corps.append("texte", texte.trim());
+    fetch(MSG_URL + id, { method: "POST", body: corps })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        afficherRetour(id, d.ok ? d.message : d.erreur, d.ok);
+      })
+      .catch(function () { afficherRetour(id, "Erreur d'envoi", false); });
+  });
+});
+</script>
+{% endblock %}

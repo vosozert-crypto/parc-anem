@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block titre %}Périphériques USB actifs{% endblock %}
+
+{% block contenu %}
+<h1>Périphériques USB actifs</h1>
+
+<div class="resume-cards">
+    <div class="resume-card">
+        <div class="resume-valeur" id="total">{{ etat.checked }}</div>
+        <div class="resume-libelle">Machines vérifiées</div>
+    </div>
+    <div class="resume-card">
+        <div class="resume-valeur" id="avec-usb">0</div>
+        <div class="resume-libelle">Avec périph. USB</div>
+    </div>
+    <div class="resume-card" id="carte-statut">
+        <div class="resume-valeur">{% if etat.en_cours %}En cours…{% else %}Terminé{% endif %}</div>
+        <div class="resume-libelle">Statut</div>
+    </div>
+</div>
+
+<table class="table" id="table-resultats">
+    <thead>
+        <tr>
+            <th>Poste</th>
+            <th>Périphériques USB</th>
+            <th>État</th>
+        </tr>
+    </thead>
+    <tbody id="lignes-resultats">
+    </tbody>
+</table>
+
+{% if etat.en_cours %}
+<p class="info" id="info-scan">Scan en cours…</p>
+{% endif %}
+
+<p class="retour"><a href="{{ url_for('securite.usb') }}">&larr; Nouveau scan</a></p>
+
+<script>
+    const scanId = "{{ etat.scan_id }}";
+    const urlStatut = "{{ url_for('securite.statut_usb', scan_id=etat.scan_id) }}";
+    const corps = document.getElementById("lignes-resultats");
+    const elTotal = document.getElementById("total");
+    const elAvecUsb = document.getElementById("avec-usb");
+    const elCarte = document.getElementById("carte-statut");
+    const elInfo = document.getElementById("info-scan");
+
+    function badgeUsb(usb) {
+        const actifs = usb.filter(u => u.actif);
+        return `<span class="badge badge-ok">${actifs.length} actif${actifs.length > 1 ? "s" : ""}</span>`;
+    }
+
+    function afficher(machines) {
+        corps.innerHTML = "";
+        let avecUsb = 0;
+        for (const m of machines) {
+            const tr = document.createElement("tr");
+            const tdNom = document.createElement("td");
+            tdNom.textContent = m.nom;
+            const tdUsb = document.createElement("td");
+            if (m.erreur) {
+                tdUsb.textContent = "—";
+            } else {
+                const noms = (m.usb || []).map(u => u.nom).join(" • ");
+                tdUsb.textContent = noms || "Aucun";
+                if (m.usb && m.usb.length) avecUsb++;
+            }
+            const tdEtat = document.createElement("td");
+            if (m.erreur) {
+                const b = document.createElement("span");
+                b.className = "badge badge-erreur";
+                b.textContent = m.erreur;
+                tdEtat.appendChild(b);
+            } else {
+                tdEtat.innerHTML = badgeUsb(m.usb || []);
+            }
+            tr.appendChild(tdNom);
+            tr.appendChild(tdUsb);
+            tr.appendChild(tdEtat);
+            corps.appendChild(tr);
+        }
+        elAvecUsb.textContent = avecUsb;
+    }
+
+    async function maj() {
+        const rep = await fetch(urlStatut);
+        if (!rep.ok) return;
+        const e = await rep.json();
+        elTotal.textContent = e.checked;
+        if (e.erreur) {
+            elCarte.querySelector(".resume-valeur").textContent = "Erreur";
+            elCarte.querySelector(".resume-libelle").textContent = e.erreur;
+        }
+        afficher(e.machines || []);
+        if (e.en_cours) {
+            setTimeout(maj, 1200);
+        } else if (elInfo) {
+            elInfo.textContent = "Scan terminé.";
+            elCarte.querySelector(".resume-valeur").textContent = "Terminé";
+        }
+    }
+    afficher({{ etat.machines | tojson }});
+    maj();
+</script>
+{% endblock %}

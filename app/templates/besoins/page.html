@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block titre %}Besoin en consommable informatique - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Besoin en consommable informatique</h2>
+    <p>Consignez les besoins en consommables (toner, cartouches…) de votre AWEM/ALEM, année par année.</p>
+  </div>
+</section>
+
+{% if role == 'admin' %}
+<form method="get" action="{{ url_for('besoins.annee', annee=annee) }}" class="form-ligne">
+  <label for="annee">Année :</label>
+  <select id="annee" name="annee" onchange="this.form.submit()">
+    {% for a in annees %}
+    <option value="{{ a }}" {% if a == annee %}selected{% endif %}>{{ a }}</option>
+    {% endfor %}
+  </select>
+  <label for="site">AWEM/ALEM :</label>
+  <select id="site" name="site" onchange="this.form.submit()">
+    <option value="">Tous les AWEM/ALEM</option>
+    {% for s in liste_sites %}
+    <option value="{{ s }}" {% if s == site_filtre %}selected{% endif %}>{{ s | site_code }}</option>
+    {% endfor %}
+  </select>
+  <span class="info">Consolidation en direct : toute saisie d'un collaborateur apparaît automatiquement.</span>
+</form>
+
+<div class="resume-cards">
+  <div class="resume-card">
+    <div class="resume-valeur">{{ stats.nb_sites }}</div>
+    <div class="resume-libelle">AWEM/ALEM</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur">{{ stats.nb_items }}</div>
+    <div class="resume-libelle">Imprimantes au total</div>
+  </div>
+  <div class="resume-card">
+    <div class="resume-valeur">{{ stats.nb_saisis }}/{{ stats.nb_sites }}</div>
+    <div class="resume-libelle">AWEM/ALEM saisis</div>
+  </div>
+</div>
+
+<div id="volet-toners" class="volet">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Réf. toner / type imprimante</th>
+          {% for site in sites_groupes|reverse %}
+          <th>{{ site | site_code }}</th>
+          {% endfor %}
+          <th>Total</th>
+          <th>Nb AWEM/ALEM</th>
+          <th>Imprimantes concernées</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in groupes %}
+        <tr>
+          <td><strong>{{ g["groupe"] }}</strong></td>
+          {% for site in sites_groupes|reverse %}
+          <td>{% if g["par_site"].get(site) %}{{ g["par_site"][site] }}{% else %}0{% endif %}</td>
+          {% endfor %}
+          <td><strong>{{ g["total"] }}</strong></td>
+          <td>{{ g["nb_sites"] }}</td>
+          <td class="desig">{{ g["designations"] | join(", ") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total général</th>
+          {% for t in totaux_groupes|reverse %}
+          <th>{{ t }}</th>
+          {% endfor %}
+          <th>{{ groupes | map(attribute="total") | sum }}</th>
+          <th colspan="2"></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="form-actions">
+    <a href="{{ url_for('besoins.exporter_csv_type', annee=annee) }}{% if site_filtre %}?site={{ site_filtre | urlencode }}{% endif %}" class="btn">Export CSV</a>
+    <a href="{{ url_for('besoins.exporter_xlsx_type', annee=annee) }}{% if site_filtre %}?site={{ site_filtre | urlencode }}{% endif %}" class="btn">Export Excel</a>
+  </div>
+</div>
+
+{% elif site is none %}
+<div class="empty-state">
+  <p>Aucun AWEM/ALEM n'est affecté à votre compte. Contactez l'administrateur pour définir votre AWEM/ALEM.</p>
+</div>
+
+{% else %}
+
+<div id="volet-users" class="volet">
+<div id="live-alerte" class="alert alert-success" hidden></div>
+
+<form method="post" id="form-consolide" action="{{ url_for('besoins.annee', annee=annee) }}">
+  <div class="table-wrap">
+    <table class="table" id="table-consolide">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Désignation imprimante</th>
+          <th>Réf. toner</th>
+          <th>Stock</th>
+          <th>Besoin</th>
+          <th>État de l'imprimante</th>
+          <th>Dernière MAJ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+        <tr>
+          <td>{{ it["numero"] }}</td>
+          <td>{{ it["designation"] }}</td>
+          <td><input type="text" name="ref_{{ it['id'] }}" value="{{ it['ref_toner'] or '' }}" placeholder="ex : CE278A"></td>
+          <td><input type="text" name="stock_{{ it['id'] }}" value="{{ it['stock'] }}" placeholder="ex : 8 paquets X 4"></td>
+          <td><input type="number" name="besoin_{{ it['id'] }}" value="{{ it['besoin'] }}" min="0"></td>
+          <td>
+            <select name="etat_{{ it['id'] }}">
+              <option value="">—</option>
+              {% if it['etat'] and it['etat'] not in etats %}
+              <option value="{{ it['etat'] }}" selected>{{ it['etat'] }}</option>
+              {% endif %}
+              {% for e in etats %}
+              <option value="{{ e }}" {% if it['etat'] == e %}selected{% endif %}>{{ e }}</option>
+              {% endfor %}
+            </select>
+          </td>
+          <td class="maj-cell" id="maj_{{ it['id'] }}">{% if it['date_maj'] %}{{ it['date_maj'][:16] }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('besoins.exporter_csv', annee=annee) }}" class="btn">Export CSV</a>
+    <a href="{{ url_for('besoins.exporter_xlsx', annee=annee) }}" class="btn">Export Excel</a>
+  </div>
+</form>
+</div>
+
+<script>
+(function () {
+    const urlStatut = new URL("{{ url_for('besoins.statut', annee=annee) }}", window.location.href);
+    const alerte = document.getElementById("live-alerte");
+    let minuterieAlerte = null;
+
+    function afficherAlerte(message) {
+        alerte.textContent = message;
+        alerte.hidden = false;
+        clearTimeout(minuterieAlerte);
+        minuterieAlerte = setTimeout(function () { alerte.hidden = true; }, 5000);
+    }
+
+    function majChamp(nom, valeur, dirty) {
+        const champ = document.querySelector('input[name="' + nom + '"], select[name="' + nom + '"]');
+        if (!champ) return false;
+        if (dirty && champ.dataset.dirty === "1") return false;
+        const actuel = String(champ.value);
+        if (actuel !== String(valeur)) {
+            champ.value = valeur;
+            return true;
+        }
+        return false;
+    }
+
+    async function actualiser() {
+        const rep = await fetch(urlStatut);
+        if (!rep.ok) return;
+        const lignes = await rep.json();
+        let changements = 0;
+        for (const l of lignes) {
+            if (majChamp("stock_" + l.id, l.stock, false)) changements++;
+            if (majChamp("besoin_" + l.id, l.besoin, false)) changements++;
+            if (majChamp("etat_" + l.id, l.etat, false)) changements++;
+            const cellule = document.getElementById("maj_" + l.id);
+            if (cellule) {
+                const texte = l.date_maj ? l.date_maj.slice(0, 16) : "—";
+                if (cellule.textContent !== texte) {
+                    cellule.textContent = texte;
+                    cellule.style.fontWeight = "bold";
+                    setTimeout(function () { cellule.style.fontWeight = ""; }, 4000);
+                }
+            }
+        }
+        if (changements > 0) {
+            afficherAlerte("Nouvelle saisie détectée en direct (" + changements + " champ(s) actualisé(s)).");
+        }
+    }
+
+    document.querySelectorAll("#form-consolide input, #form-consolide select").forEach(function (champ) {
+        champ.addEventListener("input", function () { champ.dataset.dirty = "1"; });
+    });
+
+    actualiser();
+    setInterval(actualiser, 5000);
+})();
+</script>
+
+{% endif %}
+{% endblock %}

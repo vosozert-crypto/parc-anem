@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block titre %}Imprimantes - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Imprimantes du parc</h2>
+    <p>{{ imprimantes|length }} imprimante(s) enregistrée(s).</p>
+  </div>
+  <div class="btn-group">
+    <a href="{{ url_for('imprimantes.scan') }}" class="btn">Scan réseau</a>
+    <a href="{{ url_for('imprimantes.decouvrir') }}" class="btn">Découvrir (WMI)</a>
+    <a href="{{ url_for('imprimantes.ajouter') }}" class="btn btn-primary">+ Ajouter</a>
+  </div>
+</section>
+
+{% if imprimantes %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Imprimante</th>
+        <th>Adresse IP</th>
+        <th>Marque / Modèle</th>
+        <th>Référence toner</th>
+        <th>En stock</th>
+        <th>État toner</th>
+        <th>Source</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for imp in imprimantes %}
+      <tr>
+        <td><strong>{{ imp["nom"] }}</strong></td>
+        <td>{{ imp["adresse_ip"] or "—" }}</td>
+        <td>{{ imp["marque_modele"] or "—" }}</td>
+        <td>{{ imp["reference_toner"] or "—" }}</td>
+        <td>{{ imp["stock_toner"] }}</td>
+        <td>
+          {% if imp["niveau_toner"] is not none %}
+            <span class="badge toner-{% if imp['niveau_toner'] < 15 %}epuise{% elif imp['niveau_toner'] < 40 %}faible{% else %}ok{% endif %}">
+              {{ imp["niveau_toner"] }} %
+            </span>
+          {% else %}
+            <span class="badge badge-gris">—</span>
+          {% endif %}
+        </td>
+        <td>{{ imp["source_machine"] or "—" }}</td>
+        <td class="col-actions">
+          <div class="btn-group">
+            {% if imp["adresse_ip"] %}
+            <form method="post" action="{{ url_for('imprimantes.snmp', pid=imp['id']) }}">
+              <button type="submit" class="btn btn-small">Lire toner (SNMP)</button>
+            </form>
+            {% endif %}
+            <a href="{{ url_for('imprimantes.modifier', pid=imp['id']) }}" class="btn btn-small">Modifier</a>
+            <form method="post" action="{{ url_for('imprimantes.supprimer', pid=imp['id']) }}" onsubmit="return confirm('Supprimer l'imprimante « {{ imp['nom'] }} » ?');">
+              <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Aucune imprimante enregistrée.</p>
+  <div class="btn-group">
+    <a href="{{ url_for('imprimantes.scan') }}" class="btn btn-primary">Scanner le réseau</a>
+    <a href="{{ url_for('imprimantes.decouvrir') }}" class="btn">Découvrir (WMI)</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

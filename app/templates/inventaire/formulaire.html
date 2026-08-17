@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block titre %}{{ titre }} - Anem Parc{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>{{ titre }}</h2>
+    <p>Champs basés sur le scan WMI d'origine (CaracteristiquesPCReseau).</p>
+  </div>
+  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à la liste</a>
+</section>
+
+<form method="post" class="form">
+  {% for champ, label in champs %}
+  <div class="form-row">
+    <label for="{{ champ }}">{{ label }}{% if champ == "nom" %} *{% endif %}</label>
+    <input
+      type="text"
+      id="{{ champ }}"
+      name="{{ champ }}"
+      value="{{ machine.get(champ, '') if machine else '' }}"
+      {% if champ == "nom" %}required{% endif %}
+    >
+  </div>
+  {% endfor %}
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('inventaire.liste') }}" class="btn">Annuler</a>
+  </div>
+</form>
+{% endblock %}

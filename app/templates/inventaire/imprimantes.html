@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block titre %}Imprimantes - {{ machine["nom"] }}{% endblock %}
+
+{% block contenu %}
+<section class="page-head">
+  <div>
+    <h2>Imprimantes de {{ machine["nom"] }}</h2>
+    <p>Liste des imprimantes installées sur le poste (via WMI).</p>
+  </div>
+  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+</section>
+
+{% if erreur %}
+<div class="alert alert-danger">{{ erreur }}</div>
+{% elif imprimantes %}
+<div class="table-wrap">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Partage</th>
+        <th>Port</th>
+        <th>Défaut</th>
+        <th>État</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in imprimantes %}
+      <tr>
+        <td><strong>{{ p["nom"] }}</strong></td>
+        <td>{{ p["partage"] or "—" }}</td>
+        <td>{{ p["port"] or "—" }}</td>
+        <td>{{ "Oui" if p["par_defaut"] else "—" }}</td>
+        <td>
+          {% if p["hors_ligne"] %}
+          <span class="badge badge-hors-ligne">Hors ligne</span>
+          {% else %}
+          <span class="badge badge-en-ligne">Prête</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Aucune imprimante installée sur ce poste.</p>
+</div>
+{% endif %}
+{% endblock %}

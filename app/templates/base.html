@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block titre %}Anem Parc{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <img src="{{ url_for('static', filename='anemlogo.png') }}" alt="Logo Anem" class="brand-logo small">
+      <span>Anem Parc</span>
+    </div>
+    <nav class="topbar-nav">
+      <a href="{{ url_for('main.index') }}" class="{{ 'active' if request.endpoint == 'main.index' }}">Accueil</a>
+      <div class="dropdown nav-dropdown">
+        <button type="button" class="dropdown-toggle nav-link {{ 'active' if request.endpoint and (request.endpoint.startswith('inventaire.') or request.endpoint.startswith('securite.')) }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Inventaire ▾</button>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('inventaire.liste') }}" class="dropdown-item">Liste du parc</a>
+          <a href="{{ url_for('securite.page') }}" class="dropdown-item">Sécurité</a>
+        </div>
+      </div>
+      <div class="dropdown nav-dropdown">
+        <button type="button" class="dropdown-toggle nav-link {{ 'active' if request.endpoint and (request.endpoint.startswith('imprimantes.')) }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Imprimantes ▾</button>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('imprimantes.liste') }}" class="dropdown-item">Liste des imprimantes</a>
+        </div>
+      </div>
+      <div class="dropdown nav-dropdown">
+        <button type="button" class="dropdown-toggle nav-link {{ 'active' if request.endpoint and (request.endpoint.startswith('besoins.') or request.endpoint.startswith('partage.')) }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Consommables ▾</button>
+        <div class="dropdown-menu">
+          <a href="{{ url_for('besoins.page') }}" class="dropdown-item">Besoin consommables</a>
+          {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('partage.page') }}" class="dropdown-item">Partage consommables</a>
+          {% endif %}
+        </div>
+      </div>
+      {% if session.get('role') == 'admin' %}
+      <a href="{{ url_for('utilisateurs.liste') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('utilisateurs.') }}">Utilisateurs</a>
+      {% endif %}
+    </nav>
+    <div class="topbar-user">
+      <button type="button" id="btn-etale" class="btn btn-small btn-etale" title="Basculer entre pleine largeur (paysage) et centré (portrait)">⛶ Paysage</button>
+      <div class="dropdown user-menu">
+        <button type="button" class="btn btn-small dropdown-toggle user-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">👤 {{ nom }} ▾</button>
+        <div class="dropdown-menu" role="menu">
+          <a href="{{ url_for('utilisateurs.mot_de_passe') }}" class="dropdown-item">Changer mon mot de passe</a>
+          {% if session.get('role') == 'admin' %}
+          <a href="{{ url_for('utilisateurs.liste') }}" class="dropdown-item">Gestion des utilisateurs</a>
+          {% endif %}
+          <a href="{{ url_for('auth.logout') }}" class="dropdown-item dropdown-danger">Déconnexion</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block contenu %}{% endblock %}
+  </main>
+
+  <script>
+  (function () {
+    function fermerMenus(sauf) {
+      document.querySelectorAll(".dropdown.open").forEach(function (d) {
+        if (d !== sauf) {
+          d.classList.remove("open");
+          const t = d.querySelector(".dropdown-toggle");
+          if (t) { t.setAttribute("aria-expanded", "false"); }
+        }
+      });
+    }
+    document.querySelectorAll(".dropdown-toggle").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        const d = btn.closest(".dropdown");
+        const ouvert = d.classList.toggle("open");
+        btn.setAttribute("aria-expanded", ouvert ? "true" : "false");
+        fermerMenus(d);
+      });
+    });
+    document.addEventListener("click", function () { fermerMenus(null); });
+  })();
+
+  (function () {
+    var bouton = document.getElementById("btn-etale");
+    if (!bouton) return;
+    var cle = "anem_paysage";
+    function appliquer(actif) {
+      document.body.classList.toggle("mode-portrait", !actif);
+      bouton.textContent = actif ? "⛶ Portrait" : "⛶ Paysage";
+      bouton.classList.toggle("active", actif);
+    }
+    var sauvegarde = null;
+    try { sauvegarde = localStorage.getItem(cle); } catch (e) {}
+    appliquer(sauvegarde === null ? true : sauvegarde === "1");
+    bouton.addEventListener("click", function () {
+      var actif = !document.body.classList.contains("mode-portrait");
+      appliquer(actif);
+      try { localStorage.setItem(cle, actif ? "1" : "0"); } catch (e) {}
+    });
+  })();
+  </script>
+</body>
+</html>
