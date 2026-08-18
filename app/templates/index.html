@@ -19,9 +19,6 @@
   <button type="button" class="onglet active" data-cible="accueil-inventaire">Inventaire</button>
   <button type="button" class="onglet" data-cible="accueil-imprimantes">Imprimantes</button>
   {% if is_admin %}
-  <button type="button" class="onglet" data-cible="accueil-besoins">Besoin consommables</button>
-  {% endif %}
-  {% if is_admin %}
   <button type="button" class="onglet" data-cible="accueil-partage">Partage consommables</button>
   {% endif %}
 </div>
@@ -112,47 +109,6 @@
     </table>
   </div>
   {% endif %}
-</div>
-
-<div id="accueil-besoins" class="volet" hidden>
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Réf. toner / type imprimante</th>
-          {% for site in stats.besoins.sites_groupes|reverse %}
-          <th>{{ site | site_code }}</th>
-          {% endfor %}
-          <th>Total</th>
-          <th>Nb AWEM/ALEM</th>
-          <th>Imprimantes concernées</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for g in stats.besoins.groupes %}
-        <tr>
-          <td><strong>{{ g["groupe"] }}</strong></td>
-          {% for site in stats.besoins.sites_groupes|reverse %}
-          <td>{% if g["par_site"].get(site) %}{{ g["par_site"][site] }}{% else %}0{% endif %}</td>
-          {% endfor %}
-          <td><strong>{{ g["total"] }}</strong></td>
-          <td>{{ g["nb_sites"] }}</td>
-          <td class="desig">{{ g["designations"] | join(", ") }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <th>Total général</th>
-          {% for t in stats.besoins.totaux_groupes|reverse %}
-          <th>{{ t }}</th>
-          {% endfor %}
-          <th>{{ stats.besoins.total }}</th>
-          <th colspan="2"></th>
-        </tr>
-      </tfoot>
-    </table>
-  </div>
 </div>
 
 {% if is_admin and stats.partage %}

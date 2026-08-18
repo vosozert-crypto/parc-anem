@@ -4,7 +4,6 @@ from flask import Blueprint, render_template, session
 
 from app import get_db
 from app.routes.auth import login_required, admin_required
-from app.routes.besoins import _lignes_regroupees
 from app.routes.partage import _lignes_partage, _sites_partage
 
 main_bp = Blueprint("main", __name__)
@@ -14,12 +13,6 @@ main_bp = Blueprint("main", __name__)
 @login_required
 def index():
     db = get_db()
-    annee = date.today().year
-
-    groupes, sites_groupes = _lignes_regroupees(annee)
-    totaux_groupes = [
-        sum(g["par_site"].get(s, 0) for g in groupes) for s in sites_groupes
-    ]
 
     inventaire_par_type = db.execute(
         """
@@ -64,16 +57,10 @@ def index():
             "par_type": imprimantes_par_type,
             "stock_faible": stock_faible,
         },
-        "besoins": {
-            "annee": annee,
-            "groupes": groupes,
-            "sites_groupes": sites_groupes,
-            "totaux_groupes": totaux_groupes,
-            "total": sum(g["total"] for g in groupes),
-        },
     }
 
     if is_admin:
+        annee = date.today().year
         items_partage = _lignes_partage(annee)
         sites_partage = _sites_partage()
         totaux_sites = [
