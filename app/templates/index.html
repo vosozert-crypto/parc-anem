@@ -18,7 +18,9 @@
 <div class="onglets">
   <button type="button" class="onglet active" data-cible="accueil-inventaire">Inventaire</button>
   <button type="button" class="onglet" data-cible="accueil-imprimantes">Imprimantes</button>
+  {% if is_admin %}
   <button type="button" class="onglet" data-cible="accueil-besoins">Besoin consommables</button>
+  {% endif %}
   {% if is_admin %}
   <button type="button" class="onglet" data-cible="accueil-partage">Partage consommables</button>
   {% endif %}
