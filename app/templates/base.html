@@ -30,9 +30,7 @@
       <div class="dropdown nav-dropdown">
         <button type="button" class="dropdown-toggle nav-link {{ 'active' if request.endpoint and (request.endpoint.startswith('besoins.') or request.endpoint.startswith('partage.')) }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Consommables ▾</button>
         <div class="dropdown-menu">
-          {% if session.get('role') == 'admin' %}
           <a href="{{ url_for('besoins.page') }}" class="dropdown-item">Besoin consommables</a>
-          {% endif %}
           {% if session.get('role') == 'admin' %}
           <a href="{{ url_for('partage.page') }}" class="dropdown-item">Partage consommables</a>
           {% endif %}
