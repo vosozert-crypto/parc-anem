@@ -439,6 +439,16 @@ body.mode-portrait .container {
   background: #a51f1f;
 }
 
+.btn-warning {
+  background: #e67e22;
+  color: #fff;
+  border-color: #e67e22;
+}
+
+.btn-warning:hover {
+  background: #cf6d17;
+}
+
 .btn-small {
   padding: 4px 10px;
   font-size: 0.8rem;

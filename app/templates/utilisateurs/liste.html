@@ -38,6 +38,9 @@
           <div class="btn-group">
             <a href="{{ url_for('utilisateurs.modifier', uid=u['id']) }}" class="btn btn-small">Modifier</a>
             {% if u["id"] != moi %}
+            <form method="post" action="{{ url_for('utilisateurs.reinitialiser', uid=u['id']) }}" onsubmit="return confirm('Réinitialiser le mot de passe de « {{ u['nom'] }} » ?');">
+              <button type="submit" class="btn btn-small btn-warning">Réinitialiser MDP</button>
+            </form>
             <form method="post" action="{{ url_for('utilisateurs.supprimer', uid=u['id']) }}" onsubmit="return confirm('Supprimer le compte « {{ u['nom'] }} » ?');">
               <button type="submit" class="btn btn-small btn-danger">Supprimer</button>
             </form>

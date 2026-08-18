@@ -99,6 +99,28 @@ def supprimer(uid):
     return redirect(url_for("utilisateurs.liste"))
 
 
+@utilisateurs_bp.route("/reinitialiser/<int:uid>", methods=["POST"])
+@admin_required
+def reinitialiser(uid):
+    import secrets
+    db = get_db()
+    user = db.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    if user is None:
+        flash("Utilisateur introuvable.", "warning")
+        return redirect(url_for("utilisateurs.liste"))
+    nouveau_mdp = secrets.token_urlsafe(8)
+    db.execute(
+        "UPDATE users SET mot_de_passe = ? WHERE id = ?",
+        (generate_password_hash(nouveau_mdp), uid),
+    )
+    db.commit()
+    flash(
+        f"Mot de passe de « {user['nom']} » réinitialisé : <strong>{nouveau_mdp}</strong>",
+        "success",
+    )
+    return redirect(url_for("utilisateurs.liste"))
+
+
 def _donnees_formulaire():
     return {
         "nom": request.form.get("nom", "").strip(),
