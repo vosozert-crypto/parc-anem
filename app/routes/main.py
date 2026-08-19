@@ -25,39 +25,8 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$Url='<<URL>>';" ^
  "$Token='<<TOKEN>>';" ^
  "$Site='<<SITE>>';" ^
- "Write-Host '[ANEM] Detection du reseau...' -ForegroundColor Cyan;" ^
- "$cidr=$null;" ^
- "try{$ifaces=Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop;" ^
- "  $iface=$ifaces|Where-Object{$_.IPAddress -notlike '127.*' -and $_.IPAddress -ne '' -and $_.PrefixLength -gt 0 -and $_.PrefixLength -lt 32}|Select-Object -First 1;" ^
- "  if($iface){" ^
- "    $cidr=$iface.IPAddress+'/'+$iface.PrefixLength;" ^
- "  }" ^
- "}catch{};" ^
- "if(-not $cidr){" ^
- "  Write-Host '[ANEM] Tentative via ipconfig...' -ForegroundColor Yellow;" ^
- "  $out=ipconfig|Out-String;" ^
- "  $ip=$null; $mask=$null;" ^
- "  foreach($line in $out.Split([char]10)){" ^
- "    $l=$line.Trim();" ^
- "    if($l -match '(IPv4|Adresse IPv4)[^0-9]*(\\d+\\.\\d+\\.\\d+\\.\\d+)'){$ip=$Matches[2]};" ^
- "    if($l -match '(Mask|Maskle|Sous-r)[^0-9]*(\\d+\\.\\d+\\.\\d+\\.\\d+)'){$mask=$Matches[2]};" ^
- "  };" ^
- "  if($ip -and $mask){" ^
- "    $maskParts=$mask.Split('.');" ^
- "    $cidrBits=0;" ^
- "    foreach($byte in $maskParts){" ^
- "      $v=[int]$byte;" ^
- "      while($v -gt 0){$cidrBits++;$v=$v-band($v-1)}" ^
- "    };" ^
- "    $cidr=$ip+'/'+$cidrBits;" ^
- "  }" ^
- "};" ^
- "if(-not $cidr){" ^
- "  Write-Host '[ANEM] Impossible de detecter. Saisissez le reseau (ex: 10.10.0.0/24):' -ForegroundColor Yellow;" ^
- "  $cidr=Read-Host;" ^
- "  if(-not $cidr){$cidr='10.10.0.0/24'}" ^
- "};" ^
- "Write-Host '[ANEM] Reseau: '+$cidr -ForegroundColor Cyan;" ^
+ "Write-Host '[ANEM] Reseau: 10.10.0.0/24' -ForegroundColor Cyan;" ^
+ "$cidr='10.10.0.0/24';" ^
  "$parts=$cidr.Split('/');$netAddr=$parts[0];$prefixLen=[int]$parts[1];" ^
  "$ipParts=$netAddr.Split('.');" ^
  "$ipInt=[long]$ipParts[0]*16777216+[long]$ipParts[1]*65536+[long]$ipParts[2]*256+[long]$ipParts[3];" ^
@@ -92,7 +61,20 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "};" ^
  "Write-Progress -Activity 'Scan' -Completed;" ^
  "Write-Host '';" ^
- "Write-Host ('[ANEM] '+$machines.Count+' PC, '+$imprimantes.Count+' imprimantes') -ForegroundColor Cyan;" ^
+ "Write-Host '[ANEM] Detection des imprimantes USB locales...' -ForegroundColor Cyan;" ^
+ "try{" ^
+ "  $usbPrinters=Get-CimInstance Win32_Printer -ErrorAction Stop|Where-Object{$_.PortName -match '^USB'};" ^
+ "  foreach($p in $usbPrinters){" ^
+ "    $exists=$false;" ^
+ "    foreach($e in $imprimantes){if($e.nom -eq $p.Name){$exists=$true;break}};" ^
+ "    if(-not $exists){" ^
+ "      $imprimantes+=[PSCustomObject]@{nom=$p.Name;adresse_ip=$p.PortName;marque_modele=$p.DriverName;reference_toner='';stock_toner='';source_machine='LOCAL';remarques='USB'};" ^
+ "      Write-Host '  [USB] '+$p.Name+' ('+$p.PortName+')' -ForegroundColor Magenta" ^
+ "    }" ^
+ "  }" ^
+ "}catch{};" ^
+ "Write-Host '';" ^
+ "Write-Host ('[ANEM] '+$machines.Count+' PC, '+$imprimantes.Count+' imprimantes (reseau+USB)') -ForegroundColor Cyan;" ^
  "$tryApi=$false;" ^
  "try{$test=Invoke-RestMethod -Uri ($Url+'/api/scan/status') -Headers @{Authorization='Bearer '+$Token} -TimeoutSec 5;$tryApi=$true}catch{};" ^
  "if($tryApi){" ^
