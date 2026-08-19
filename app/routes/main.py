@@ -27,42 +27,47 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$Site='<<SITE>>';" ^
  "Write-Host '[ANEM] Detection du reseau...' -ForegroundColor Cyan;" ^
  "$cidr=$null;" ^
- "$iface=Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue|Where-Object{$_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notlike '127.*' -and $_.IPAddress -ne '' -and $_.IPAddress -ne $null}|Select-Object -First 1;" ^
- "if($iface -and $iface.IPAddress -and $iface.PrefixLength){" ^
- "  $octets=$iface.IPAddress.Split('.');" ^
- "  $cidr=$octets[0]+'.'+$octets[1]+'.'+$octets[2]+'.'+$octets[3]+'/'+$iface.PrefixLength;" ^
- "}else{" ^
+ "try{$ifaces=Get-NetIPAddress -AddressFamily IPv4 -ErrorAction Stop;" ^
+ "  $iface=$ifaces|Where-Object{$_.IPAddress -notlike '127.*' -and $_.IPAddress -ne '' -and $_.PrefixLength -gt 0 -and $_.PrefixLength -lt 32}|Select-Object -First 1;" ^
+ "  if($iface){" ^
+ "    $cidr=$iface.IPAddress+'/'+$iface.PrefixLength;" ^
+ "  }" ^
+ "}catch{};" ^
+ "if(-not $cidr){" ^
  "  Write-Host '[ANEM] Tentative via ipconfig...' -ForegroundColor Yellow;" ^
  "  $out=ipconfig|Out-String;" ^
- "  if($out -match 'Adresse IPv4[^:]*:\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)'){" ^
- "    $myIp=$Matches[1];" ^
- "    if($out -match 'Masque de sous-r\\u00e9seau[^:]*:\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)'){" ^
- "      $myMask=$Matches[1];" ^
- "      $net=[ipaddress]$myIp;" ^
- "      $msk=[ipaddress]$myMask;" ^
- "      $netBytes=$net.GetAddressBytes();$mskBytes=$msk.GetAddressBytes();" ^
- "      $cidrBits=0;for($j=0;$j -lt 4;$j++){$b=$mskBytes[$j];while($b -gt 0){$cidrBits+=$b%2;$b=[int]$b/2}};" ^
- "      $cidr=$myIp+'/'+$cidrBits;" ^
- "    }" ^
+ "  $ip=$null; $mask=$null;" ^
+ "  foreach($line in $out.Split([char]10)){" ^
+ "    $l=$line.Trim();" ^
+ "    if($l -match '(IPv4|Adresse IPv4)[^0-9]*(\\d+\\.\\d+\\.\\d+\\.\\d+)'){$ip=$Matches[2]};" ^
+ "    if($l -match '(Mask|Maskle|Sous-r)[^0-9]*(\\d+\\.\\d+\\.\\d+\\.\\d+)'){$mask=$Matches[2]};" ^
+ "  };" ^
+ "  if($ip -and $mask){" ^
+ "    $maskParts=$mask.Split('.');" ^
+ "    $cidrBits=0;" ^
+ "    foreach($byte in $maskParts){" ^
+ "      $v=[int]$byte;" ^
+ "      while($v -gt 0){$cidrBits++;$v=$v-band($v-1)}" ^
+ "    };" ^
+ "    $cidr=$ip+'/'+$cidrBits;" ^
  "  }" ^
  "};" ^
  "if(-not $cidr){" ^
- "  Write-Host '[ANEM] ERREUR: Impossible de detecter le reseau.' -ForegroundColor Red;" ^
- "  $cidr='192.168.1.0/24';" ^
- "  Write-Host '[ANEM] Fallback: '+$cidr -ForegroundColor Yellow;" ^
+ "  Write-Host '[ANEM] Impossible de detecter. Saisissez le reseau (ex: 10.10.0.0/24):' -ForegroundColor Yellow;" ^
+ "  $cidr=Read-Host;" ^
+ "  if(-not $cidr){$cidr='10.10.0.0/24'}" ^
  "};" ^
  "Write-Host '[ANEM] Reseau: '+$cidr -ForegroundColor Cyan;" ^
- "$parts=$cidr.Split('/');" ^
- "$ipParts=$parts[0].Split('.');" ^
- "$ipInt=[uint32]([int]$ipParts[0]*16777216+[int]$ipParts[1]*65536+[int]$ipParts[2]*256+[int]$ipParts[3]);" ^
- "$cidrBits=[int]$parts[1];" ^
- "$hostBits=32-$cidrBits;" ^
- "$maskInt=[uint32]([math]::Pow(2,$hostBits)-2);" ^
+ "$parts=$cidr.Split('/');$netAddr=$parts[0];$prefixLen=[int]$parts[1];" ^
+ "$ipParts=$netAddr.Split('.');" ^
+ "$ipInt=[long]$ipParts[0]*16777216+[long]$ipParts[1]*65536+[long]$ipParts[2]*256+[long]$ipParts[3];" ^
+ "$hostBits=32-$prefixLen;$totalHosts=[long][math]::Pow(2,$hostBits)-2;" ^
  "$machines=@();$imprimantes=@();$count=0;" ^
- "for($i=1;$i -le $maskInt;$i++){" ^
- " $count++;$curInt=$ipInt+$i;$bb=[BitConverter]::GetBytes($curInt);" ^
- " $ip=$bb[3]+'.'+$bb[2]+'.'+$bb[1]+'.'+$bb[0];" ^
- " $pct=[math]::Round($count/$maskInt*100);" ^
+ "for($i=1;$i -le $totalHosts;$i++){" ^
+ " $count++;$cur=$ipInt+$i;" ^
+ " $a=[int]($cur/16777216)%256; $b=[int]($cur/65536)%256; $c=[int]($cur/256)%256; $d=$cur%256;" ^
+ " $ip=$a+'.'+$b+'.'+$c+'.'+$d;" ^
+ " $pct=[math]::Round($count/$totalHosts*100);" ^
  " Write-Progress -Activity 'Scan' -Status ('% '+$pct+' - '+$ip) -PercentComplete $pct;" ^
  " try{$ping=New-Object System.Net.NetworkInformation.Ping;$r=$ping.Send($ip,200);$ok=$r.Status -eq 'Success'}catch{$ok=$false};" ^
  " if($ok){" ^
