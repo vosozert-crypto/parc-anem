@@ -8,7 +8,7 @@
     <h2>{{ titre }}</h2>
     <p>Champs basés sur le scan WMI d'origine (CaracteristiquesPCReseau).</p>
   </div>
-  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à la liste</a>
+  <a href="{{ url_for('ordinateurs.liste') }}" class="btn">← Retour à la liste</a>
 </section>
 
 <form method="post" class="form">
@@ -26,7 +26,10 @@
   {% endfor %}
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Enregistrer</button>
-    <a href="{{ url_for('inventaire.liste') }}" class="btn">Annuler</a>
+    <a href="{{ url_for('ordinateurs.liste') }}" class="btn">Annuler</a>
   </div>
 </form>
 {% endblock %}
+
+
+

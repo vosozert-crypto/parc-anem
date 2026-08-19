@@ -23,7 +23,7 @@ def create_app(config=None):
     from app.routes.auth import auth_bp
     from app.routes.besoins import besoins_bp
     from app.routes.imprimantes import imprimantes_bp
-    from app.routes.inventaire import inventaire_bp
+    from app.routes.ordinateurs import ordinateurs_bp
     from app.routes.main import main_bp
     from app.routes.partage import partage_bp
     from app.routes.securite import securite_bp
@@ -32,7 +32,7 @@ def create_app(config=None):
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
-    app.register_blueprint(inventaire_bp)
+    app.register_blueprint(ordinateurs_bp)
     app.register_blueprint(imprimantes_bp)
     app.register_blueprint(securite_bp)
     app.register_blueprint(utilisateurs_bp)

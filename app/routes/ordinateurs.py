@@ -10,7 +10,7 @@ from app import get_db
 from app.routes.auth import login_required
 from app.scan import construire_plage, detecter_cidr, lister_imprimantes, ping, scan_reseau
 
-inventaire_bp = Blueprint("inventaire", __name__, url_prefix="/inventaire")
+ordinateurs_bp = Blueprint("ordinateurs", __name__, url_prefix="/ordinateurs")
 
 CHAMPS = [
     ("nom", "Nom du poste"),
@@ -26,7 +26,7 @@ CHAMPS = [
 ]
 
 
-@inventaire_bp.route("/")
+@ordinateurs_bp.route("/")
 @login_required
 def liste():
     db = get_db()
@@ -40,17 +40,17 @@ def liste():
             ).fetchall()
         else:
             machines = []
-    return render_template("inventaire/liste.html", machines=machines)
+    return render_template("ordinateurs/liste.html", machines=machines)
 
 
-@inventaire_bp.route("/ajouter", methods=["GET", "POST"])
+@ordinateurs_bp.route("/ajouter", methods=["GET", "POST"])
 @login_required
 def ajouter():
     if request.method == "POST":
         donnees = {c[0]: request.form.get(c[0], "").strip() for c in CHAMPS}
         if not donnees["nom"]:
             flash("Le nom du poste est obligatoire.", "danger")
-            return render_template("inventaire/formulaire.html", machine={}, titre="Ajouter un poste", champs=CHAMPS)
+            return render_template("ordinateurs/formulaire.html", machine={}, titre="Ajouter un poste", champs=CHAMPS)
         db = get_db()
         db.execute(
             """INSERT INTO machines (nom, numero_serie, marque_modele, processeur,
@@ -63,23 +63,23 @@ def ajouter():
         )
         db.commit()
         flash("Poste « " + donnees["nom"] + " » ajouté à l'inventaire.", "success")
-        return redirect(url_for("inventaire.liste"))
-    return render_template("inventaire/formulaire.html", machine={}, titre="Ajouter un poste", champs=CHAMPS)
+        return redirect(url_for('ordinateurs.liste'))
+    return render_template("ordinateurs/formulaire.html", machine={}, titre="Ajouter un poste", champs=CHAMPS)
 
 
-@inventaire_bp.route("/modifier/<int:mid>", methods=["GET", "POST"])
+@ordinateurs_bp.route("/modifier/<int:mid>", methods=["GET", "POST"])
 @login_required
 def modifier(mid):
     db = get_db()
     machine = db.execute("SELECT * FROM machines WHERE id = ?", (mid,)).fetchone()
     if machine is None:
         flash("Poste introuvable.", "warning")
-        return redirect(url_for("inventaire.liste"))
+        return redirect(url_for('ordinateurs.liste'))
     if request.method == "POST":
         donnees = {c[0]: request.form.get(c[0], "").strip() for c in CHAMPS}
         if not donnees["nom"]:
             flash("Le nom du poste est obligatoire.", "danger")
-            return render_template("inventaire/formulaire.html", machine=machine, titre="Modifier le poste", champs=CHAMPS)
+            return render_template("ordinateurs/formulaire.html", machine=machine, titre="Modifier le poste", champs=CHAMPS)
         db.execute(
             """UPDATE machines SET nom = ?, numero_serie = ?, marque_modele = ?,
                processeur = ?, generation = ?, ram_go = ?, disque = ?, arch = ?,
@@ -91,25 +91,25 @@ def modifier(mid):
         )
         db.commit()
         flash("Poste « " + donnees["nom"] + " » modifié.", "success")
-        return redirect(url_for("inventaire.liste"))
-    return render_template("inventaire/formulaire.html", machine=machine, titre="Modifier le poste", champs=CHAMPS)
+        return redirect(url_for('ordinateurs.liste'))
+    return render_template("ordinateurs/formulaire.html", machine=machine, titre="Modifier le poste", champs=CHAMPS)
 
 
-@inventaire_bp.route("/supprimer/<int:mid>", methods=["POST"])
+@ordinateurs_bp.route("/supprimer/<int:mid>", methods=["POST"])
 @login_required
 def supprimer(mid):
     db = get_db()
     machine = db.execute("SELECT * FROM machines WHERE id = ?", (mid,)).fetchone()
     if machine is None:
         flash("Poste introuvable.", "warning")
-        return redirect(url_for("inventaire.liste"))
+        return redirect(url_for('ordinateurs.liste'))
     db.execute("DELETE FROM machines WHERE id = ?", (mid,))
     db.commit()
     flash("Poste « " + machine["nom"] + " » supprimé.", "info")
-    return redirect(url_for("inventaire.liste"))
+    return redirect(url_for('ordinateurs.liste'))
 
 
-@inventaire_bp.route("/scan", methods=["GET", "POST"])
+@ordinateurs_bp.route("/scan", methods=["GET", "POST"])
 @login_required
 def scan():
     from app.routes.besoins import preparer_besoins_site, _site_utilisateur
@@ -125,17 +125,17 @@ def scan():
             plage = cidr_actuel
         if not plage:
             flash("Indiquez la plage réseau (ex : 192.168.1.0/24) ; la détection automatique a échoué.", "warning")
-            return render_template("inventaire/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
+            return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
         try:
             hosts = construire_plage(plage)
         except ValueError as e:
             flash(str(e), "danger")
-            return render_template("inventaire/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
+            return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
 
         preparer_besoins_site(datetime.date.today().year, _site_utilisateur())
         scan_id = _demarrer_scan(plage, hosts, parallelisme)
-        return redirect(url_for("inventaire.live", scan_id=scan_id))
-    return render_template("inventaire/scan.html", cidr_actuel=cidr_actuel, parallelisme=50)
+        return redirect(url_for("ordinateurs.live", scan_id=scan_id))
+    return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=50)
 
 
 _SCANS = {}
@@ -182,17 +182,17 @@ def _demarrer_scan(plage, hosts, parallelisme):
     return scan_id
 
 
-@inventaire_bp.route("/scan/live/<scan_id>")
+@ordinateurs_bp.route("/scan/live/<scan_id>")
 @login_required
 def live(scan_id):
     etat = _SCANS.get(scan_id)
     if etat is None:
         flash("Scan introuvable ou expiré.", "warning")
-        return redirect(url_for("inventaire.scan"))
-    return render_template("inventaire/live.html", etat=etat)
+        return redirect(url_for('ordinateurs.scan'))
+    return render_template("ordinateurs/live.html", etat=etat)
 
 
-@inventaire_bp.route("/scan/statut/<scan_id>")
+@ordinateurs_bp.route("/scan/statut/<scan_id>")
 @login_required
 def statut(scan_id):
     from flask import jsonify
@@ -248,7 +248,7 @@ def _colonnes_export():
     ]
 
 
-@inventaire_bp.route("/export/csv")
+@ordinateurs_bp.route("/export/csv")
 @login_required
 def exporter_csv():
     from flask import Response
@@ -264,11 +264,11 @@ def exporter_csv():
     return Response(
         donnees,
         mimetype="text/csv; charset=utf-8",
-        headers={"Content-Disposition": "attachment; filename=inventaire_anem.csv"},
+        headers={"Content-Disposition": "attachment; filename=ordinateurs_anem.csv"},
     )
 
 
-@inventaire_bp.route("/export/xlsx")
+@ordinateurs_bp.route("/export/xlsx")
 @login_required
 def exporter_xlsx():
     from flask import send_file
@@ -282,7 +282,7 @@ def exporter_xlsx():
 
     classeur = Workbook()
     feuille = classeur.active
-    feuille.title = "Inventaire"
+    feuille.title = "Ordinateurs"
     entetes = [label for _, label in _colonnes_export()]
     feuille.append(entetes)
     for cell in feuille[1]:
@@ -300,7 +300,7 @@ def exporter_xlsx():
     return send_file(
         tampon,
         as_attachment=True,
-        download_name="inventaire_anem.xlsx",
+        download_name="ordinateurs_anem.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
@@ -313,7 +313,7 @@ def _machine_ou_404(mid):
     return machine
 
 
-@inventaire_bp.route("/statut/<int:mid>")
+@ordinateurs_bp.route("/statut/<int:mid>")
 @login_required
 def statut_machine(mid):
     machine = _machine_ou_404(mid)
@@ -323,7 +323,7 @@ def statut_machine(mid):
     return jsonify({"en_ligne": en_ligne, "latence_ms": latence})
 
 
-@inventaire_bp.route("/rdp/<int:mid>", methods=["POST"])
+@ordinateurs_bp.route("/rdp/<int:mid>", methods=["POST"])
 @login_required
 def rdp(mid):
     machine = _machine_ou_404(mid)
@@ -336,7 +336,7 @@ def rdp(mid):
         return jsonify({"ok": False, "erreur": str(e)})
 
 
-@inventaire_bp.route("/message/<int:mid>", methods=["POST"])
+@ordinateurs_bp.route("/message/<int:mid>", methods=["POST"])
 @login_required
 def message(mid):
     machine = _machine_ou_404(mid)
@@ -360,17 +360,22 @@ def message(mid):
         return jsonify({"ok": False, "erreur": str(e)})
 
 
-@inventaire_bp.route("/imprimantes/<int:mid>")
+@ordinateurs_bp.route("/imprimantes/<int:mid>")
 @login_required
 def imprimantes(mid):
     machine = _machine_ou_404(mid)
     if machine is None:
         flash("Poste introuvable.", "warning")
-        return redirect(url_for("inventaire.liste"))
+        return redirect(url_for('ordinateurs.liste'))
     resultat = lister_imprimantes(machine["nom"])
     return render_template(
-        "inventaire/imprimantes.html",
+        "ordinateurs/imprimantes.html",
         machine=machine,
         imprimantes=resultat.get("liste", []),
         erreur=resultat.get("erreur"),
     )
+
+
+
+
+

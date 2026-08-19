@@ -8,7 +8,7 @@
     <h2>Scan réseau</h2>
     <p>Collecte automatique des postes et de leurs caractéristiques via WMI.</p>
   </div>
-  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+  <a href="{{ url_for('ordinateurs.liste') }}" class="btn">← Retour à l'inventaire</a>
 </section>
 
 <div class="alert alert-warning">
@@ -28,7 +28,10 @@
   </div>
   <div class="form-actions">
     <button type="submit" class="btn btn-primary">Démarrer le scan</button>
-    <a href="{{ url_for('inventaire.liste') }}" class="btn">Annuler</a>
+    <a href="{{ url_for('ordinateurs.liste') }}" class="btn">Annuler</a>
   </div>
 </form>
 {% endblock %}
+
+
+

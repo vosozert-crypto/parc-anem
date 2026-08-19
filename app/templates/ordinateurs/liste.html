@@ -1,19 +1,32 @@
 {% extends "base.html" %}
 
-{% block titre %}Inventaire - Anem Parc{% endblock %}
+{% block titre %}Ordinateurs - Anem Parc{% endblock %}
 
 {% block contenu %}
 <section class="page-head">
   <div>
-    <h2>Inventaire du parc{% if session.get('site') %} — {{ session['site'] | site_code }}{% endif %}</h2>
+  <h2>Ordinateurs du parc{% if session.get('site') %} — {{ session['site'] | site_code }}{% endif %}</h2>
     <p>{{ machines|length }} poste(s) enregistré(s).</p>
   </div>
   <div class="btn-group">
-    <a href="{{ url_for('inventaire.scan') }}" class="btn btn-primary">Scan réseau</a>
+    <a href="{{ url_for('ordinateurs.scan') }}" class="btn btn-primary">Scan réseau</a>
     <a href="{{ url_for('main.telecharger_bat') }}" class="btn btn-success">⬇ Telecharger .BAT</a>
-    <a href="{{ url_for('inventaire.exporter_csv') }}" class="btn">CSV</a>
-    <a href="{{ url_for('inventaire.exporter_xlsx') }}" class="btn">Excel</a>
-    <a href="{{ url_for('inventaire.ajouter') }}" class="btn">+ Ajouter</a>
+    <a href="{{ url_for('ordinateurs.exporter_csv') }}" class="btn">CSV</a>
+    <a href="{{ url_for('ordinateurs.exporter_xlsx') }}" class="btn">Excel</a>
+    <a href="{{ url_for('ordinateurs.ajouter') }}" class="btn">+ Ajouter</a>
+    <button type="button" class="btn" id="btn-import-toggle">⬆ Importer CSV/Excel</button>
+  </div>
+  <div id="zone-import" class="card mt-3" hidden>
+    <div class="card-body">
+      <p>Importez un fichier CSV ou Excel contenant des postes. Le détecteur sépare automatiquement ordinateurs et imprimantes.</p>
+      <form id="form-import-ordi" enctype="multipart/form-data">
+        <div class="input-group">
+          <input type="file" class="form-control" id="fichier-import-ordi" name="fichier" accept=".csv,.xlsx,.xls" required>
+          <button type="submit" class="btn btn-primary" id="btn-importer-ordi">Importer</button>
+        </div>
+      </form>
+      <div id="resultat-import-ordi" class="mt-2"></div>
+    </div>
   </div>
 </section>
 
@@ -59,9 +72,9 @@
               <button type="button" class="dropdown-item action-ping" data-id="{{ m['id'] }}">Ping</button>
               <button type="button" class="dropdown-item action-rdp" data-id="{{ m['id'] }}">Bureau à distance (RDP)</button>
               <button type="button" class="dropdown-item action-msg" data-id="{{ m['id'] }}">Envoyer un message</button>
-              <a href="{{ url_for('inventaire.imprimantes', mid=m['id']) }}" class="dropdown-item">Imprimantes</a>
-              <a href="{{ url_for('inventaire.modifier', mid=m['id']) }}" class="dropdown-item">Modifier</a>
-              <form method="post" action="{{ url_for('inventaire.supprimer', mid=m['id']) }}" onsubmit="return confirm('Supprimer le poste « {{ m['nom'] }} » ?');">
+              <a href="{{ url_for('ordinateurs.imprimantes', mid=m['id']) }}" class="dropdown-item">Imprimantes</a>
+              <a href="{{ url_for('ordinateurs.modifier', mid=m['id']) }}" class="dropdown-item">Modifier</a>
+              <form method="post" action="{{ url_for('ordinateurs.supprimer', mid=m['id']) }}" onsubmit="return confirm('Supprimer le poste « {{ m['nom'] }} » ?');">
                 <button type="submit" class="dropdown-item dropdown-danger">Supprimer</button>
               </form>
             </div>
@@ -75,15 +88,15 @@
 </div>
 {% else %}
 <div class="empty-state">
-  <p>Aucun poste dans l'inventaire pour le moment.</p>
-  <a href="{{ url_for('inventaire.ajouter') }}" class="btn btn-primary">Ajouter le premier poste</a>
+  <p>Aucun poste dans les ordinateurs pour le moment.</p>
+  <a href="{{ url_for('ordinateurs.ajouter') }}" class="btn btn-primary">Ajouter le premier poste</a>
 </div>
 {% endif %}
 
 <script>
-const STATUT_URL = "{{ url_for('inventaire.statut_machine', mid=0) }}".replace("/0", "/");
-const RDP_URL = "{{ url_for('inventaire.rdp', mid=0) }}".replace("/0", "/");
-const MSG_URL = "{{ url_for('inventaire.message', mid=0) }}".replace("/0", "/");
+const STATUT_URL = "{{ url_for('ordinateurs.statut_machine', mid=0) }}".replace("/0", "/");
+const RDP_URL = "{{ url_for('ordinateurs.rdp', mid=0) }}".replace("/0", "/");
+const MSG_URL = "{{ url_for('ordinateurs.message', mid=0) }}".replace("/0", "/");
 
 function echoJS(valeur) {
   return (valeur || "").replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -184,5 +197,45 @@ document.querySelectorAll(".action-msg").forEach(function (btn) {
       .catch(function () { afficherRetour(id, "Erreur d'envoi", false); });
   });
 });
+
+document.getElementById("btn-import-toggle").addEventListener("click", function () {
+  var z = document.getElementById("zone-import");
+  z.hidden = !z.hidden;
+});
+
+document.getElementById("form-import-ordi").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var btn = document.getElementById("btn-importer-ordi");
+  var fileInput = document.getElementById("fichier-import-ordi");
+  var resultDiv = document.getElementById("resultat-import-ordi");
+  if (!fileInput.files.length) { alert("Choisissez un fichier."); return; }
+  btn.disabled = true;
+  btn.textContent = "Import en cours...";
+  var formData = new FormData();
+  formData.append("fichier", fileInput.files[0]);
+  fetch("/api/scan/import", { method: "POST", body: formData })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      if (data.erreur) {
+        resultDiv.className = "alert alert-danger";
+        resultDiv.textContent = data.erreur;
+      } else {
+        resultDiv.className = "alert alert-success";
+        resultDiv.textContent = "Import terminé : " + data.ajoutes_machines + " PC + " + data.ajoutes_imprimantes + " imprimantes ajoutés, " + data.ignores + " ignorés.";
+        setTimeout(function () { location.reload(); }, 1500);
+      }
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      resultDiv.className = "alert alert-danger";
+      resultDiv.textContent = "Erreur: " + err;
+    });
+});
 </script>
 {% endblock %}
+
+
+

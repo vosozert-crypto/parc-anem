@@ -9,21 +9,21 @@
 </section>
 
 <section class="cards">
-  <a href="{{ url_for('inventaire.liste') }}" class="card">
+  <a href="{{ url_for('ordinateurs.liste') }}" class="card">
     <h3>Inventaire</h3>
     <p>Gérer les postes du parc informatique.</p>
   </a>
 </section>
 
 <div class="onglets">
-  <button type="button" class="onglet active" data-cible="accueil-inventaire">Inventaire</button>
+  <button type="button" class="onglet active" data-cible="accueil-ordinateurs">Ordinateurs</button>
   <button type="button" class="onglet" data-cible="accueil-imprimantes">Imprimantes</button>
   {% if is_admin %}
   <button type="button" class="onglet" data-cible="accueil-partage">Partage consommables</button>
   {% endif %}
 </div>
 
-<div id="accueil-inventaire" class="volet">
+<div id="accueil-ordinateurs" class="volet">
   <div class="table-wrap">
     <table class="table">
       <thead>
@@ -34,7 +34,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for r in stats.inventaire.par_type %}
+        {% for r in stats.ordinateurs.par_type %}
         <tr>
           <td><strong>{{ r["type"] or "Non renseigné" }}</strong></td>
           <td><strong>{{ r["total"] }}</strong></td>
@@ -45,7 +45,7 @@
       <tfoot>
         <tr>
           <th>Total général</th>
-          <th>{{ stats.inventaire.total }}</th>
+          <th>{{ stats.ordinateurs.total }}</th>
           <th></th>
         </tr>
       </tfoot>
@@ -162,3 +162,4 @@
 })();
 </script>
 {% endblock %}
+

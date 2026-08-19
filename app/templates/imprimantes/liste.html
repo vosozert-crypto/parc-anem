@@ -13,6 +13,19 @@
     <a href="{{ url_for('imprimantes.decouvrir') }}" class="btn">Découvrir (WMI)</a>
     <a href="{{ url_for('main.telecharger_bat') }}" class="btn btn-success">⬇ Telecharger .BAT</a>
     <a href="{{ url_for('imprimantes.ajouter') }}" class="btn btn-primary">+ Ajouter</a>
+    <button type="button" class="btn" id="btn-import-toggle-imp">⬆ Importer CSV/Excel</button>
+  </div>
+  <div id="zone-import-imp" class="card mt-3" hidden>
+    <div class="card-body">
+      <p>Importez un fichier CSV ou Excel. Le détecteur sépare automatiquement ordinateurs et imprimantes.</p>
+      <form id="form-import-imp" enctype="multipart/form-data">
+        <div class="input-group">
+          <input type="file" class="form-control" id="fichier-import-imp" name="fichier" accept=".csv,.xlsx,.xls" required>
+          <button type="submit" class="btn btn-primary" id="btn-importer-imp">Importer</button>
+        </div>
+      </form>
+      <div id="resultat-import-imp" class="mt-2"></div>
+    </div>
   </div>
 </section>
 
@@ -78,4 +91,44 @@
   </div>
 </div>
 {% endif %}
+
+<script>
+document.getElementById("btn-import-toggle-imp").addEventListener("click", function () {
+  var z = document.getElementById("zone-import-imp");
+  z.hidden = !z.hidden;
+});
+
+document.getElementById("form-import-imp").addEventListener("submit", function (e) {
+  e.preventDefault();
+  var btn = document.getElementById("btn-importer-imp");
+  var fileInput = document.getElementById("fichier-import-imp");
+  var resultDiv = document.getElementById("resultat-import-imp");
+  if (!fileInput.files.length) { alert("Choisissez un fichier."); return; }
+  btn.disabled = true;
+  btn.textContent = "Import en cours...";
+  var formData = new FormData();
+  formData.append("fichier", fileInput.files[0]);
+  fetch("/api/scan/import", { method: "POST", body: formData })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      if (data.erreur) {
+        resultDiv.className = "alert alert-danger";
+        resultDiv.textContent = data.erreur;
+      } else {
+        resultDiv.className = "alert alert-success";
+        resultDiv.textContent = "Import terminé : " + data.ajoutes_machines + " PC + " + data.ajoutes_imprimantes + " imprimantes ajoutés, " + data.ignores + " ignorés.";
+        setTimeout(function () { location.reload(); }, 1500);
+      }
+    })
+    .catch(function (err) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      resultDiv.className = "alert alert-danger";
+      resultDiv.textContent = "Erreur: " + err;
+    });
+});
+</script>
 {% endblock %}
+

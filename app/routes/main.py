@@ -150,7 +150,7 @@ pause
 def index():
     db = get_db()
 
-    inventaire_par_type = db.execute(
+    ordinateurs_par_type = db.execute(
         """
         SELECT marque_modele AS type, COUNT(*) AS total,
                GROUP_CONCAT(nom, ', ') AS details
@@ -184,9 +184,9 @@ def index():
     is_admin = session.get("role") == "admin"
 
     stats = {
-        "inventaire": {
-            "total": sum(r["total"] for r in inventaire_par_type),
-            "par_type": inventaire_par_type,
+        "ordinateurs": {
+            "total": sum(r["total"] for r in ordinateurs_par_type),
+            "par_type": ordinateurs_par_type,
         },
         "imprimantes": {
             "total": sum(r["total"] for r in imprimantes_par_type),

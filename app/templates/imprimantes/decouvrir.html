@@ -6,7 +6,7 @@
 <section class="page-head">
   <div>
     <h2>Découvrir les imprimantes</h2>
-    <p>Imprimantes détectées via WMI sur les postes de l'inventaire. Ajoutez celles à suivre.</p>
+    <p>Imprimantes détectées via WMI sur les postes des ordinateurs. Ajoutez celles à suivre.</p>
   </div>
   <a href="{{ url_for('imprimantes.liste') }}" class="btn">← Retour à la liste</a>
 </section>
@@ -60,8 +60,9 @@
 </div>
 {% else %}
 <div class="empty-state">
-  <p>Aucune imprimante détectée sur les postes de l'inventaire (vérifiez le pare-feu/WMI).</p>
+  <p>Aucune imprimante détectée sur les postes des ordinateurs (vérifiez le pare-feu/WMI).</p>
   <a href="{{ url_for('imprimantes.ajouter') }}" class="btn btn-primary">Ajouter à la main</a>
 </div>
 {% endif %}
 {% endblock %}
+

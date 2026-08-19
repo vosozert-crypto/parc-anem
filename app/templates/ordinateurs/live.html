@@ -8,7 +8,7 @@
     <h2>Scan de {{ etat["plage"] }}</h2>
     <p id="statut-texte">Démarrage du scan...</p>
   </div>
-  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+  <a href="{{ url_for('ordinateurs.liste') }}" class="btn">← Retour à l'inventaire</a>
 </section>
 
 <div class="progression">
@@ -41,8 +41,8 @@
 
 <script>
 const SCAN_ID = "{{ etat['scan_id'] }}";
-const STATUT_URL = "{{ url_for('inventaire.statut', scan_id=etat['scan_id']) }}";
-const LISTE_URL = "{{ url_for('inventaire.liste') }}";
+const STATUT_URL = "{{ url_for('ordinateurs.statut', scan_id=etat['scan_id']) }}";
+const LISTE_URL = "{{ url_for('ordinateurs.liste') }}";
 const corps = document.getElementById("resultats-corps");
 const fill = document.getElementById("progress-fill");
 const compteur = document.getElementById("progress-compteur");
@@ -107,3 +107,6 @@ function actualiser() {
 actualiser();
 </script>
 {% endblock %}
+
+
+

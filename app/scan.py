@@ -585,7 +585,7 @@ def usb_actifs(host):
 
 
 def scanner_usb_machines(machines, max_parallelism, progres=None):
-    """Liste les périphériques USB actifs sur les machines de l'inventaire."""
+    """Liste les périphériques USB actifs sur les machines des ordinateurs."""
     resultats = []
     avec = ThreadPoolExecutor(max_workers=max_parallelism)
 
@@ -601,3 +601,4 @@ def scanner_usb_machines(machines, max_parallelism, progres=None):
             progres(i, len(machines), m["nom"])
     avec.shutdown()
     return resultats
+

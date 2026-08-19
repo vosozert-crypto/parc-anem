@@ -8,7 +8,7 @@
     <h2>Imprimantes de {{ machine["nom"] }}</h2>
     <p>Liste des imprimantes installées sur le poste (via WMI).</p>
   </div>
-  <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
+  <a href="{{ url_for('ordinateurs.liste') }}" class="btn">← Retour à l'inventaire</a>
 </section>
 
 {% if erreur %}
@@ -50,3 +50,6 @@
 </div>
 {% endif %}
 {% endblock %}
+
+
+
