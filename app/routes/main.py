@@ -106,28 +106,33 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  " Write-Host '      Verifiez sur: $Url' -ForegroundColor Yellow" ^
  "}else{" ^
  " Write-Host '[ANEM] Pas de connexion internet.' -ForegroundColor Yellow;" ^
- " Write-Host '[ANEM] Generation du fichier CSV...' -ForegroundColor Cyan;" ^
+ " Write-Host '[ANEM] Generation des fichiers CSV...' -ForegroundColor Cyan;" ^
  " $ts=Get-Date -Format 'yyyyMMdd_HHmmss';" ^
  " $folder=Join-Path $env:USERPROFILE 'Desktop';" ^
  " if(-not(Test-Path $folder)){$folder=$env:TEMP};" ^
- " $fn='ANEM_Scan_'+$Site.Replace(' ','_')+'_'+$ts+'.csv';" ^
- " $fp=Join-Path $folder $fn;" ^
- " $sb=New-Object System.Text.StringBuilder;" ^
- " [void]$sb.AppendLine('nom,numero_serie,marque_modele,processeur,generation,ram_go,disque,arch,user_session,obs,site');" ^
+ " $siteName=$Site.Replace(' ','_');" ^
+ " $fnPC='ANEM_PC_'+$siteName+'_'+$ts+'.csv';" ^
+ " $fpPC=Join-Path $folder $fnPC;" ^
+ " $sbPC=New-Object System.Text.StringBuilder;" ^
+ " [void]$sbPC.AppendLine('nom,numero_serie,marque_modele,processeur,generation,ram_go,disque,arch,user_session,obs,site');" ^
  " foreach($m in $machines){" ^
  "  $line=@($m.nom,$m.numero_serie,$m.marque_modele,$m.processeur,$m.generation,$m.ram_go,$m.disque,$m.arch,$m.user_session,$m.obs,$Site)|ForEach-Object{(''+''''+($_ -replace '''','''''')+''''+'')};" ^
- "  [void]$sb.AppendLine($line -join ',');" ^
+ "  [void]$sbPC.AppendLine($line -join ',');" ^
  " };" ^
- " [void]$sb.AppendLine('');" ^
- " [void]$sb.AppendLine('nom,adresse_ip,marque_modele,reference_toner,stock_toner,source_machine,remarques,site');" ^
+ " [System.IO.File]::WriteAllText($fpPC,$sbPC.ToString(),[System.Text.Encoding]::UTF8);" ^
+ " $fnImpr='ANEM_Imprimantes_'+$siteName+'_'+$ts+'.csv';" ^
+ " $fpImpr=Join-Path $folder $fnImpr;" ^
+ " $sbImpr=New-Object System.Text.StringBuilder;" ^
+ " [void]$sbImpr.AppendLine('nom,adresse_ip,marque_modele,reference_toner,stock_toner,source_machine,remarques,site');" ^
  " foreach($p in $imprimantes){" ^
  "  $line=@($p.nom,$p.adresse_ip,$p.marque_modele,$p.reference_toner,$p.stock_toner,$p.source_machine,$p.remarques,$Site)|ForEach-Object{(''+''''+($_ -replace '''','''''')+''''+'')};" ^
- "  [void]$sb.AppendLine($line -join ',');" ^
+ "  [void]$sbImpr.AppendLine($line -join ',');" ^
  " };" ^
- " [System.IO.File]::WriteAllText($fp,$sb.ToString(),[System.Text.Encoding]::UTF8);" ^
+ " [System.IO.File]::WriteAllText($fpImpr,$sbImpr.ToString(),[System.Text.Encoding]::UTF8);" ^
  " Write-Host '';" ^
- " Write-Host '[ANEM] Fichier sauvegarde: '+$fp -ForegroundColor Green;" ^
- " Write-Host '[ANEM] Importez-le sur le site via le bouton Import Excel.' -ForegroundColor Yellow;" ^
+ " Write-Host '[ANEM] PC: '+$fpPC -ForegroundColor Green;" ^
+ " Write-Host '[ANEM] Imprimantes: '+$fpImpr -ForegroundColor Green;" ^
+ " Write-Host '[ANEM] Importez-les sur le site via le bouton Import Excel.' -ForegroundColor Yellow;" ^
  " Write-Host '      $Url/scan' -ForegroundColor Yellow" ^
  "};" ^
  "Write-Host '';" ^
