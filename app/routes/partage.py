@@ -24,15 +24,12 @@ def _annee_par_defaut():
 
 
 def _liste_annees(annee_actuelle):
-    courant = datetime.date.today().year
     db = get_db()
     annees = {r["annee"] for r in db.execute("SELECT DISTINCT annee FROM partage").fetchall()}
-    annees.add(courant - 2)
-    annees.add(courant - 1)
-    annees.add(courant)
-    annees.add(courant + 1)
+    for a in range(2026, 2037):
+        annees.add(a)
     annees.add(annee_actuelle)
-    return sorted(a for a in annees if a)
+    return sorted(a for a in annees if 2026 <= a <= 2036)
 
 
 _RENOMMER_PARTAGE = {
