@@ -43,7 +43,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$done=0;" ^
  "foreach($j in $jobs){" ^
  " $res=$j.PS.EndInvoke($j.Handle);$j.PS.Dispose();" ^
- " if($res){$found++;$alive.Add($res.Value);Write-Host ('  [+] '+$res.Value) -ForegroundColor Green}" ^
+ " if($res -and $res.Count -gt 0){$found++;$adr=[string]$res[0];$alive.Add($adr);Write-Host ('  [+] '+$adr) -ForegroundColor Green}" ^
  " $done++;$pct=[math]::Round($done/$total*100);" ^
  " if($done -band 31 -eq 0){Write-Progress -Activity 'Ping' -Status ('Hosts vivants: '+$found+'/'+$total+' - '+$pct+'pct') -PercentComplete $pct}" ^
  "};" ^
@@ -54,26 +54,32 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$wmiJobs=@();" ^
  "foreach($ip in $alive){" ^
  " $ps2=[powershell]::Create();$ps2.RunspacePool=$pool2;" ^
- " $ps2.AddScript({param($ip) try{" ^
- "  $cs=Get-CimInstance Win32_ComputerSystem -ComputerName $ip -ErrorAction Stop;" ^
- "  $os=Get-CimInstance Win32_OperatingSystem -ComputerName $ip -ErrorAction Stop;" ^
- "  $pr=Get-CimInstance Win32_Processor -ComputerName $ip -ErrorAction Stop;" ^
- "  $bios=Get-CimInstance Win32_BIOS -ComputerName $ip -ErrorAction Stop;" ^
- "  $ram=[math]::Round($cs.TotalPhysicalMemory/1GB);" ^
- "  $pc=[PSCustomObject]@{nom=$cs.Name;numero_serie=$bios.SerialNumber.Trim();marque_modele=($cs.Manufacturer+' '+$cs.Model);processeur=$pr.Name;ram_go=($ram.ToString()+' Go');arch=$os.OSArchitecture;generation='';disque='';user_session='';obs=''};" ^
+ " $ps2.AddScript({param($ip) " ^
+ "  $cs=$null;$os=$null;$pr=$null;$bios=$null;" ^
+ "  try{$cs=Get-CimInstance Win32_ComputerSystem -ComputerName $ip -ErrorAction Stop}catch{};" ^
+ "  try{$os=Get-CimInstance Win32_OperatingSystem -ComputerName $ip -ErrorAction Stop}catch{};" ^
+ "  try{$pr=Get-CimInstance Win32_Processor -ComputerName $ip -ErrorAction Stop}catch{};" ^
+ "  try{$bios=Get-CimInstance Win32_BIOS -ComputerName $ip -ErrorAction Stop}catch{};" ^
+ "  $nom=$ip;if($cs -and $cs.Name){$nom=$cs.Name};" ^
+ "  $sn='';if($bios){$sn=($bios.SerialNumber|ForEach-Object{$_.ToString().Trim()})};" ^
+ "  $marque='';if($cs){$marque=($cs.Manufacturer+' '+$cs.Model)};" ^
+ "  $proc='';if($pr){$proc=$pr.Name};" ^
+ "  $ram='';if($cs -and $cs.TotalPhysicalMemory){$ram=([math]::Round($cs.TotalPhysicalMemory/1GB)).ToString()+' Go'};" ^
+ "  $arch='';if($os){$arch=$os.OSArchitecture};" ^
+ "  $pc=[PSCustomObject]@{nom=$nom;numero_serie=$sn;marque_modele=$marque;processeur=$proc;ram_go=$ram;arch=$arch;generation='';disque='';user_session='';obs=''};" ^
  "  $prs=@();" ^
  "  try{$printers=Get-CimInstance Win32_Printer -ComputerName $ip -ErrorAction Stop;foreach($pp in $printers){if($pp.PortName -and $pp.PortName -notmatch '^USB'){$prs+=[PSCustomObject]@{nom=$pp.Name;adresse_ip=$pp.PortName;marque_modele=$pp.DriverName;reference_toner='';stock_toner=0;source_machine=$ip;remarques=''}}}}catch{};" ^
  "  [PSCustomObject]@{pc=$pc;printers=$prs}" ^
- " }catch{}}).AddArgument($ip)|Out-Null;" ^
+ "}).AddArgument($ip)|Out-Null;" ^
  " $wmiJobs+=@{PS=$ps2;Handle=$ps2.BeginInvoke();IP=$ip}" ^
  "};" ^
  "Write-Host '[ANEM] WMI sur '+$found+' PC (parallele)...' -ForegroundColor Cyan;" ^
  "$wmiDone=0;" ^
  "foreach($wj in $wmiJobs){" ^
  " $res=$wj.PS.EndInvoke($wj.Handle);$wj.PS.Dispose();" ^
- " if($res -and $res.Value){" ^
- "  $machines+=$res.Value.pc;$imprimantes+=$res.Value.printers;" ^
- "  Write-Host ('      -> '+$res.Value.pc.nom+' | '+$res.Value.pc.marque_modele) -ForegroundColor Gray" ^
+ " if($res -and $res.Count -gt 0 -and $res[0]){" ^
+ "  $obj=$res[0];$machines+=$obj.pc;$imprimantes+=$obj.printers;" ^
+ "  Write-Host ('      -> '+$obj.pc.nom+' | '+$obj.pc.marque_modele) -ForegroundColor Gray" ^
  " };" ^
  " $wmiDone++;$wpct=[math]::Round($wmiDone/$found*100);" ^
  " Write-Progress -Activity 'WMI' -Status ($wmiDone+'/'+$found+' PC') -PercentComplete $wpct" ^
@@ -93,19 +99,32 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "}catch{};" ^
  "Write-Host '';" ^
  "Write-Host ('[ANEM] '+$machines.Count+' PC, '+$imprimantes.Count+' imprimantes (reseau+USB)') -ForegroundColor Cyan;" ^
- "$tryApi=$false;" ^
- "try{$test=Invoke-RestMethod -Uri ($Url+'/api/scan/status') -Headers @{Authorization='Bearer '+$Token} -TimeoutSec 5;$tryApi=$true}catch{};" ^
- "if($tryApi){" ^
- " Write-Host '[ANEM] Connexion OK, envoi a Railway...' -ForegroundColor Cyan;" ^
- " $body=$machines|ConvertTo-Json -Depth 5;" ^
- " try{$r=Invoke-RestMethod -Uri ($Url+'/api/scan/machines') -Method POST -Headers @{Authorization='Bearer '+$Token;'Content-Type'='application/json'} -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 60;Write-Host ('  Machines: +'+$r.ajoutes+' ajoutes, '+$r.ignores+' ignores') -ForegroundColor Green}catch{Write-Host ('  Erreur: '+$_.Exception.Message) -ForegroundColor Red};" ^
- " $body2=$imprimantes|ConvertTo-Json -Depth 5;" ^
- " try{$r2=Invoke-RestMethod -Uri ($Url+'/api/scan/imprimantes') -Method POST -Headers @{Authorization='Bearer '+$Token;'Content-Type'='application/json'} -Body ([System.Text.Encoding]::UTF8.GetBytes($body2)) -TimeoutSec 60;Write-Host ('  Imprimantes: +'+$r2.ajoutes+' ajoutes, '+$r2.ignores+' ignores') -ForegroundColor Green}catch{Write-Host ('  Erreur: '+$_.Exception.Message) -ForegroundColor Red};" ^
- " Write-Host '';" ^
- " Write-Host '[ANEM] TERMINE ! Donnees envoyees sur Railway.' -ForegroundColor Green;" ^
- " Write-Host ('      Verifiez sur: '+$Url) -ForegroundColor Yellow" ^
- "}else{" ^
- " Write-Host '[ANEM] Pas de connexion internet.' -ForegroundColor Yellow;" ^
+ "Write-Host '';" ^
+ "Write-Host '  =====================================' -ForegroundColor Cyan;" ^
+ "Write-Host '  Comment enregistrer les resultats ?' -ForegroundColor Cyan;" ^
+ "Write-Host '    [1] Envoyer a Railway (internet requis)' -ForegroundColor White;" ^
+ "Write-Host '    [2] Enregistrer en fichiers CSV (Bureau)' -ForegroundColor White;" ^
+ "Write-Host '    [3] Envoyer a Railway ET enregistrer en CSV' -ForegroundColor White;" ^
+ "$choix=Read-Host '  Votre choix (1/2/3)';" ^
+ "$envoyerApi=($choix -eq '1' -or $choix -eq '3');$genCsv=($choix -eq '2' -or $choix -eq '3');" ^
+ "if(-not($envoyerApi -or $genCsv)){$envoyerApi=$true};" ^
+ "if($envoyerApi){" ^
+ " $tryApi=$false;try{$test=Invoke-RestMethod -Uri ($Url+'/api/scan/status') -Headers @{Authorization='Bearer '+$Token} -TimeoutSec 5;$tryApi=$true}catch{};" ^
+ " if($tryApi){" ^
+ "  Write-Host '[ANEM] Connexion OK, envoi a Railway...' -ForegroundColor Cyan;" ^
+ "  $body=$machines|ConvertTo-Json -Depth 5;" ^
+ "  try{$r=Invoke-RestMethod -Uri ($Url+'/api/scan/machines') -Method POST -Headers @{Authorization='Bearer '+$Token;'Content-Type'='application/json'} -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 60;Write-Host ('  Machines: +'+$r.ajoutes+' ajoutes, '+$r.ignores+' ignores') -ForegroundColor Green}catch{Write-Host ('  Erreur: '+$_.Exception.Message) -ForegroundColor Red};" ^
+ "  $body2=$imprimantes|ConvertTo-Json -Depth 5;" ^
+ "  try{$r2=Invoke-RestMethod -Uri ($Url+'/api/scan/imprimantes') -Method POST -Headers @{Authorization='Bearer '+$Token;'Content-Type'='application/json'} -Body ([System.Text.Encoding]::UTF8.GetBytes($body2)) -TimeoutSec 60;Write-Host ('  Imprimantes: +'+$r2.ajoutes+' ajoutes, '+$r2.ignores+' ignores') -ForegroundColor Green}catch{Write-Host ('  Erreur: '+$_.Exception.Message) -ForegroundColor Red};" ^
+ "  Write-Host '';" ^
+ "  Write-Host '[ANEM] TERMINE ! Donnees envoyees sur Railway.' -ForegroundColor Green;" ^
+ "  Write-Host ('      Verifiez sur: '+$Url) -ForegroundColor Yellow" ^
+ " }else{" ^
+ "  Write-Host '[ANEM] Pas de connexion internet. Generation CSV a la place.' -ForegroundColor Yellow;" ^
+ "  $genCsv=$true" ^
+ " }" ^
+ "};" ^
+ "if($genCsv){" ^
  " Write-Host '[ANEM] Generation des fichiers CSV...' -ForegroundColor Cyan;" ^
  " $ts=Get-Date -Format 'yyyyMMdd_HHmmss';" ^
  " $folder=Join-Path $env:USERPROFILE 'Desktop';" ^
