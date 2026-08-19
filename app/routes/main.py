@@ -65,7 +65,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$machines=@();$imprimantes=@();$count=0;" ^
  "for($i=1;$i -le $totalHosts;$i++){" ^
  " $count++;$cur=$ipInt+$i;" ^
- " $a=[int]($cur/16777216)%256; $b=[int]($cur/65536)%256; $c=[int]($cur/256)%256; $d=$cur%256;" ^
+ " $a=[int]($cur/16777216)%%256; $b=[int]($cur/65536)%%256; $c=[int]($cur/256)%%256; $d=$cur%%256;" ^
  " $ip=$a+'.'+$b+'.'+$c+'.'+$d;" ^
  " $pct=[math]::Round($count/$totalHosts*100);" ^
  " Write-Progress -Activity 'Scan' -Status ('% '+$pct+' - '+$ip) -PercentComplete $pct;" ^
