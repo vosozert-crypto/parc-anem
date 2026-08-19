@@ -39,7 +39,7 @@ def _liste_annees(annee_actuelle):
 def _site_utilisateur():
     db = get_db()
     ligne = db.execute(
-        "SELECT site FROM users WHERE id = ?", (session["user_id"],)
+        "SELECT site FROM users WHERE id = %s", (session["user_id"],)
     ).fetchone()
     return (ligne["site"] or "").strip() if ligne else ""
 
@@ -55,14 +55,14 @@ def preparer_besoins_site(annee, site):
         return 0
     db = get_db()
     items = db.execute(
-        "SELECT id FROM consommables WHERE site = ? ORDER BY id", (site,)
+        "SELECT id FROM consommables WHERE site = %s ORDER BY id", (site,)
     ).fetchall()
     nb = 0
     for it in items:
         cur = db.execute(
             """INSERT INTO besoins
                  (consommable_id, annee, stock, besoin, etat, rempli_par, date_maj)
-               VALUES (?, ?, '', 0, '', 'scan automatique', datetime('now'))
+               VALUES (%s, %s, '', 0, '', 'scan automatique', NOW())
                ON CONFLICT(consommable_id, annee) DO NOTHING""",
             (it["id"], annee),
         )
@@ -148,12 +148,12 @@ def _lignes_consolidees(annee, site=None):
                   COALESCE(b.stock, '') AS stock,
                   COALESCE(b.besoin, 0) AS besoin,
                   COALESCE(b.etat, '') AS etat,
-                  COALESCE(b.date_maj, '') AS date_maj
+                  TO_CHAR(b.date_maj, 'YYYY-MM-DD HH24:MI:SS') AS date_maj
            FROM consommables c
-           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = ?"""
+           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = %s"""
     params = [annee]
     if site:
-        requete += " WHERE c.site = ?"
+        requete += " WHERE c.site = %s"
         params.append(site)
     requete += " ORDER BY c.site, c.id"
     rows = db.execute(requete, params).fetchall()
@@ -179,10 +179,10 @@ def _lignes_regroupees(annee, site=None):
                   c.designation AS designation,
                   SUM(COALESCE(b.besoin, 0)) AS total
            FROM consommables c
-           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = ?"""
+           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = %s"""
     params = [annee]
     if site:
-        requete += " WHERE c.site = ?"
+        requete += " WHERE c.site = %s"
         params.append(site)
     requete += " GROUP BY groupe, c.site, c.designation ORDER BY groupe, c.site, c.designation"
     rows = db.execute(requete, params).fetchall()
@@ -208,7 +208,7 @@ def _enregistrer_besoins(annee, form, site=None):
     db = get_db()
     if site:
         items = db.execute(
-            "SELECT id FROM consommables WHERE site = ? ORDER BY id", (site,)
+            "SELECT id FROM consommables WHERE site = %s ORDER BY id", (site,)
         ).fetchall()
     else:
         items = db.execute(
@@ -225,7 +225,7 @@ def _enregistrer_besoins(annee, form, site=None):
         db.execute(
             """INSERT INTO besoins
                  (consommable_id, annee, stock, besoin, etat, rempli_par, date_maj)
-               VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+               VALUES (%s, %s, %s, %s, %s, %s, NOW())
                ON CONFLICT(consommable_id, annee) DO UPDATE SET
                  stock = excluded.stock,
                  besoin = excluded.besoin,
@@ -237,7 +237,7 @@ def _enregistrer_besoins(annee, form, site=None):
         ref = form.get("ref_" + str(cid), "").strip()
         if ref:
             db.execute(
-                "UPDATE consommables SET ref_toner = ? WHERE id = ?", (ref, cid)
+                "UPDATE consommables SET ref_toner = %s WHERE id = %s", (ref, cid)
             )
     db.commit()
 
@@ -254,12 +254,12 @@ def statut(annee):
                   COALESCE(b.stock, '') AS stock,
                   COALESCE(b.besoin, 0) AS besoin,
                   COALESCE(b.etat, '') AS etat,
-                  COALESCE(b.date_maj, '') AS date_maj
+                  TO_CHAR(b.date_maj, 'YYYY-MM-DD HH24:MI:SS') AS date_maj
            FROM consommables c
-           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = ?"""
+           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = %s"""
     params = [annee]
     if site:
-        requete += " WHERE c.site = ?"
+        requete += " WHERE c.site = %s"
         params.append(site)
     requete += " ORDER BY c.site, c.id"
     rows = db.execute(requete, params).fetchall()
@@ -286,10 +286,10 @@ def formulaire(annee, site):
                   COALESCE(b.stock, '') AS stock,
                   COALESCE(b.besoin, 0) AS besoin,
                   COALESCE(b.etat, '') AS etat,
-                  b.date_maj AS date_maj
+                  TO_CHAR(b.date_maj, 'YYYY-MM-DD HH24:MI:SS') AS date_maj
            FROM consommables c
-           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = ?
-           WHERE c.site = ?
+           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = %s
+           WHERE c.site = %s
            ORDER BY c.id""",
         (annee, site),
     ).fetchall()
@@ -310,10 +310,10 @@ def _lignes_export(annee, site=None):
                   COALESCE(b.besoin, 0) AS besoin,
                   COALESCE(b.etat, '') AS etat
            FROM consommables c
-           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = ?"""
+           LEFT JOIN besoins b ON b.consommable_id = c.id AND b.annee = %s"""
     params = [annee]
     if site:
-        requete += " WHERE c.site = ?"
+        requete += " WHERE c.site = %s"
         params.append(site)
     requete += " ORDER BY c.site, c.id"
     rows = db.execute(requete, params).fetchall()
@@ -486,3 +486,4 @@ def exporter_xlsx_type(annee):
         download_name="besoin_par_type_{}.xlsx".format(annee),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+

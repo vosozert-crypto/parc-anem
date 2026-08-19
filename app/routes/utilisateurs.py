@@ -19,7 +19,7 @@ CHAMPS = [
 def liste():
     db = get_db()
     utilisateurs = db.execute(
-        "SELECT id, nom, email, role, site, date_ajout FROM users ORDER BY nom"
+        "SELECT id, nom, email, role, site, TO_CHAR(date_ajout, 'YYYY-MM-DD') AS date_ajout FROM users ORDER BY nom"
     ).fetchall()
     return render_template(
         "utilisateurs/liste.html",
@@ -39,7 +39,7 @@ def ajouter():
             return render_template("utilisateurs/formulaire.html", user={}, titre="Ajouter un utilisateur", champs=CHAMPS, sites=SITES)
         db = get_db()
         db.execute(
-            "INSERT INTO users (nom, email, mot_de_passe, role, site) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO users (nom, email, mot_de_passe, role, site) VALUES (%s, %s, %s, %s, %s)",
             (donnees["nom"], donnees["email"], generate_password_hash(donnees["mot_de_passe"]), donnees["role"], donnees["site"]),
         )
         db.commit()
@@ -52,7 +52,7 @@ def ajouter():
 @admin_required
 def modifier(uid):
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = %s", (uid,)).fetchone()
     if user is None:
         flash("Utilisateur introuvable.", "warning")
         return redirect(url_for("utilisateurs.liste"))
@@ -63,12 +63,12 @@ def modifier(uid):
             flash(erreur, "danger")
             return render_template("utilisateurs/formulaire.html", user=user, titre="Modifier l'utilisateur", champs=CHAMPS, sites=SITES)
         db.execute(
-            "UPDATE users SET nom = ?, email = ?, role = ?, site = ? WHERE id = ?",
+            "UPDATE users SET nom = %s, email = %s, role = %s, site = %s WHERE id = %s",
             (donnees["nom"], donnees["email"], donnees["role"], donnees["site"], uid),
         )
         if donnees["mot_de_passe"]:
             db.execute(
-                "UPDATE users SET mot_de_passe = ? WHERE id = ?",
+                "UPDATE users SET mot_de_passe = %s WHERE id = %s",
                 (generate_password_hash(donnees["mot_de_passe"]), uid),
             )
         db.commit()
@@ -84,7 +84,7 @@ def supprimer(uid):
         flash("Impossible de supprimer votre propre compte.", "danger")
         return redirect(url_for("utilisateurs.liste"))
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = %s", (uid,)).fetchone()
     if user is None:
         flash("Utilisateur introuvable.", "warning")
         return redirect(url_for("utilisateurs.liste"))
@@ -93,7 +93,7 @@ def supprimer(uid):
         if admins <= 1:
             flash("Impossible de supprimer le dernier administrateur.", "danger")
             return redirect(url_for("utilisateurs.liste"))
-    db.execute("DELETE FROM users WHERE id = ?", (uid,))
+    db.execute("DELETE FROM users WHERE id = %s", (uid,))
     db.commit()
     flash("Utilisateur « " + user["nom"] + " » supprimé.", "info")
     return redirect(url_for("utilisateurs.liste"))
@@ -104,13 +104,13 @@ def supprimer(uid):
 def reinitialiser(uid):
     import secrets
     db = get_db()
-    user = db.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    user = db.execute("SELECT * FROM users WHERE id = %s", (uid,)).fetchone()
     if user is None:
         flash("Utilisateur introuvable.", "warning")
         return redirect(url_for("utilisateurs.liste"))
     nouveau_mdp = secrets.token_urlsafe(8)
     db.execute(
-        "UPDATE users SET mot_de_passe = ? WHERE id = ?",
+        "UPDATE users SET mot_de_passe = %s WHERE id = %s",
         (generate_password_hash(nouveau_mdp), uid),
     )
     db.commit()
@@ -140,7 +140,7 @@ def _valider(donnees, uid=None):
         return "Rôle invalide."
     db = get_db()
     existant = db.execute(
-        "SELECT id FROM users WHERE email = ? AND id != ?",
+        "SELECT id FROM users WHERE email = %s AND id != %s",
         (donnees["email"], uid or -1),
     ).fetchone()
     if existant:
@@ -159,7 +159,7 @@ def mot_de_passe():
         confirmation = request.form.get("confirmation", "")
         db = get_db()
         user = db.execute(
-            "SELECT * FROM users WHERE id = ?", (session["user_id"],)
+            "SELECT * FROM users WHERE id = %s", (session["user_id"],)
         ).fetchone()
         if user is None:
             flash("Utilisateur introuvable.", "danger")
@@ -174,10 +174,11 @@ def mot_de_passe():
             flash("La confirmation ne correspond pas.", "danger")
             return render_template("utilisateurs/mot_de_passe.html")
         db.execute(
-            "UPDATE users SET mot_de_passe = ? WHERE id = ?",
+            "UPDATE users SET mot_de_passe = %s WHERE id = %s",
             (generate_password_hash(nouveau), session["user_id"]),
         )
         db.commit()
         flash("Mot de passe modifié avec succès.", "success")
         return redirect(url_for("main.index"))
     return render_template("utilisateurs/mot_de_passe.html")
+
