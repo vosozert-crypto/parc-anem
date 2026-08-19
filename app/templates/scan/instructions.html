@@ -4,55 +4,54 @@
 <div class="container-fluid px-4 py-3">
   <h2 class="mb-4">Scan Reseau - Instructions</h2>
 
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">1. Installer les prerequis</h5>
+  <div class="card mb-4 border-success">
+    <div class="card-header bg-success text-white">
+      <h5 class="mb-0">Etape 1 : Telecharger le scanner</h5>
     </div>
     <div class="card-body">
-      <p>Sur le poste Windows de l'AWEM/ALEM qui a acces au reseau local :</p>
+      <p>Cliquez sur le bouton ci-dessous pour telecharger le fichier <code>.bat</code>. Ce fichier est configure automatiquement avec votre site et le token.</p>
+      <a href="{{ url_for('main.telecharger_bat') }}" class="btn btn-success btn-lg">
+        &#11015; Telecharger ANEM_Scan_{{ site_utilisateur | replace(' ', '_') }}.bat
+      </a>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">Etape 2 : Executer sur un PC du reseau ALEM</h5>
+    </div>
+    <div class="card-body">
       <ol>
-        <li>Installer <strong>Python 3.11+</strong> : <a href="https://www.python.org/downloads/" target="_blank">python.org</a></li>
-        <li>Ouvrir un terminal et lancer :</li>
+        <li>Copier le fichier <code>.bat</code> sur un PC Windows connecte au reseau de l'AWEM/ALEM (cle USB, partage reseau...)</li>
+        <li><strong>Clic droit &rarr; Executer en tant qu'administrateur</strong></li>
+        <li>Le scan demarre automatiquement et detecte tous les PC et imprimantes du reseau</li>
       </ol>
-      <pre class="bg-light p-3 rounded"><code>pip install requests wmi pythoncom</code></pre>
-      <p><em>Sur Windows, <code>wmi</code> et <code>pythoncom</code> sont inclus dans <code>pywin32</code> qui s'installe via <code>pip install pywin32</code></em></p>
+      <div class="alert alert-info mt-3">
+        <strong>Sans internet :</strong> Le script genere un fichier CSV sur le Bureau. Importez-le ci-dessous.<br>
+        <strong>Avec internet :</strong> Les donnees sont envoyees directement a Railway.
+      </div>
     </div>
   </div>
 
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">2. Telecharger le script</h5>
+  <div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+      <h5 class="mb-0">Import Excel / CSV</h5>
     </div>
     <div class="card-body">
-      <p>Copier le fichier <code>scanner_local.py</code> sur le poste cible.</p>
+      <p>Si le PC du reseau n'a pas d'acces internet, importez le fichier CSV genere :</p>
+      <form id="form-import" enctype="multipart/form-data" class="mb-3">
+        <div class="input-group">
+          <input type="file" class="form-control" id="fichier-import" name="fichier" accept=".csv,.xlsx,.xls" required>
+          <button type="submit" class="btn btn-warning" id="btn-importer">Importer</button>
+        </div>
+      </form>
+      <div id="resultat-import" class="d-none"></div>
     </div>
   </div>
 
   <div class="card mb-4">
     <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">3. Lancer le scan</h5>
-    </div>
-    <div class="card-body">
-      <p>Ouvrir un terminal <strong>en tant qu'administrateur</strong> et lancer :</p>
-      <pre class="bg-light p-3 rounded"><code>python scanner_local.py --url https://parc-anem-production.up.railway.app --token <strong>{{ api_token }}</strong> --site "<strong>{{ site_utilisateur }}</strong>"</code></pre>
-      <p>Si le reseau n'est pas detecte automatiquement :</p>
-      <pre class="bg-light p-3 rounded"><code>python scanner_local.py --url https://parc-anem-production.up.railway.app --token {{ api_token }} --site "{{ site_utilisateur }}" --cidr 192.168.100.0/24</code></pre>
-    </div>
-  </div>
-
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">4. Resultat</h5>
-    </div>
-    <div class="card-body">
-      <p>Le scan envoie automatiquement les PC et imprimantes trouves a la base de donnees centrale. Les donnees apparaissent sur <a href="/inventaire/">l'inventaire</a> et les <a href="/imprimantes/">imprimantes</a> sans intervention.</p>
-      <p class="text-muted">Reexecuter le scan regulierement pour garder les donnees a jour.</p>
-    </div>
-  </div>
-
-  <div class="card mb-4">
-    <div class="card-header bg-dark text-white">
-      <h5 class="mb-0">Token API</h5>
+      <h5 class="mb-0">Token API (pour debug)</h5>
     </div>
     <div class="card-body">
       <div class="input-group">
@@ -64,6 +63,43 @@
 </div>
 
 <script>
+document.getElementById("form-import").addEventListener("submit", function(e) {
+  e.preventDefault();
+  var btn = document.getElementById("btn-importer");
+  var fileInput = document.getElementById("fichier-import");
+  var resultDiv = document.getElementById("resultat-import");
+
+  if (!fileInput.files.length) { alert("Choisissez un fichier."); return; }
+
+  btn.disabled = true;
+  btn.textContent = "Import en cours...";
+
+  var formData = new FormData();
+  formData.append("fichier", fileInput.files[0]);
+
+  fetch("/api/scan/import", { method: "POST", body: formData })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      if (data.erreur) {
+        resultDiv.className = "alert alert-danger";
+        resultDiv.textContent = data.erreur;
+      } else {
+        resultDiv.className = "alert alert-success";
+        resultDiv.textContent = "Import termine : " + data.ajoutes_machines + " PC + " + data.ajoutes_imprimantes + " imprimantes ajoutes, " + data.ignores + " ignores.";
+      }
+      resultDiv.classList.remove("d-none");
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = "Importer";
+      resultDiv.className = "alert alert-danger";
+      resultDiv.textContent = "Erreur: " + err;
+      resultDiv.classList.remove("d-none");
+    });
+});
+
 function copierToken() {
   var el = document.getElementById("apiToken");
   el.select();
