@@ -5,7 +5,7 @@
 {% block contenu %}
 <section class="page-head">
   <div>
-    <h2>Imprimantes du parc</h2>
+    <h2>Imprimantes du parc{% if session.get('site') %} — {{ session['site'] | site_code }}{% endif %}</h2>
     <p>{{ imprimantes|length }} imprimante(s) enregistrée(s).</p>
   </div>
   <div class="btn-group">
@@ -26,6 +26,7 @@
         <th>Référence toner</th>
         <th>En stock</th>
         <th>État toner</th>
+        <th>Site</th>
         <th>Source</th>
         <th class="col-actions">Actions</th>
       </tr>
@@ -48,6 +49,7 @@
           {% endif %}
         </td>
         <td>{{ imp["source_machine"] or "—" }}</td>
+        <td><strong>{{ imp["site"] | site_code if imp["site"] else "—" }}</strong></td>
         <td class="col-actions">
           <div class="btn-group">
             {% if imp["adresse_ip"] %}

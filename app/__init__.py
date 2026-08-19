@@ -247,6 +247,7 @@ def _init_pg():
         arch TEXT,
         user_session TEXT,
         obs TEXT,
+        site TEXT,
         date_ajout TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
     db.execute("""CREATE TABLE IF NOT EXISTS imprimantes (
@@ -259,6 +260,7 @@ def _init_pg():
         niveau_toner INTEGER,
         source_machine TEXT,
         remarques TEXT,
+        site TEXT,
         date_ajout TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )""")
     db.execute("""CREATE TABLE IF NOT EXISTS consommables (
@@ -295,6 +297,11 @@ def _init_pg():
         date_maj TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(annee, designation_id)
     )""")
+    for table in ("machines", "imprimantes"):
+        try:
+            db.execute("ALTER TABLE {} ADD COLUMN site TEXT".format(table))
+        except Exception:
+            pass
     db.commit()
 
 
@@ -332,6 +339,8 @@ def _init_sqlite():
     colonnes = {r[1] for r in conn.execute("PRAGMA table_info(machines)").fetchall()}
     if "user_session" not in colonnes:
         conn.execute("ALTER TABLE machines ADD COLUMN user_session TEXT")
+    if "site" not in colonnes:
+        conn.execute("ALTER TABLE machines ADD COLUMN site TEXT")
     colonnes_users = {r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
     if "date_ajout" not in colonnes_users:
         conn.execute("ALTER TABLE users ADD COLUMN date_ajout TEXT")
@@ -352,6 +361,9 @@ def _init_sqlite():
             date_ajout TEXT DEFAULT (datetime('now'))
         )"""
     )
+    colonnes_imp = {r[1] for r in conn.execute("PRAGMA table_info(imprimantes)").fetchall()}
+    if "site" not in colonnes_imp:
+        conn.execute("ALTER TABLE imprimantes ADD COLUMN site TEXT")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS consommables (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

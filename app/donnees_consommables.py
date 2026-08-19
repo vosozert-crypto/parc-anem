@@ -135,6 +135,7 @@ SITES_PAR_DEFAUT = {
 }
 
 CODES_SITES = {
+    "awem.bouira": "1000",
     "bouira": "1001",
     "ainbessem": "1002",
     "ainbessam": "1002",
@@ -149,7 +150,7 @@ CODES_SITES = {
 
 
 def code_site(site):
-    """Renvoie le code d'un site (1001 ALEM bouira, …) ou '' s'il est inconnu."""
+    """Renvoie le code d'un site (1000 AWEM bouira, 1001 ALEM bouira, …) ou '' s'il est inconnu."""
     if not site:
         return ""
     texte = (
@@ -160,6 +161,8 @@ def code_site(site):
         .replace("\u2019", "")
         .replace(" ", "")
     )
+    if texte.startswith("awem") and "bouira" in texte:
+        return "1000"
     for cle in (
         "ainbessem",
         "ainbessam",

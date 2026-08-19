@@ -47,6 +47,7 @@ def login():
             session["user_id"] = user["id"]
             session["nom"] = user["nom"]
             session["role"] = user["role"]
+            session["site"] = (user["site"] or "").strip()
             flash("Bienvenue, " + user["nom"] + " !", "success")
             return redirect(url_for("main.index"))
         flash("Adresse email ou mot de passe incorrect.", "danger")

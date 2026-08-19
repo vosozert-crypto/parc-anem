@@ -5,7 +5,7 @@
 {% block contenu %}
 <section class="page-head">
   <div>
-    <h2>Inventaire du parc</h2>
+    <h2>Inventaire du parc{% if session.get('site') %} — {{ session['site'] | site_code }}{% endif %}</h2>
     <p>{{ machines|length }} poste(s) enregistré(s).</p>
   </div>
   <div class="btn-group">
@@ -29,6 +29,7 @@
         <th>RAM</th>
         <th>Disque</th>
         <th>OS</th>
+        <th>Site</th>
         <th>Session</th>
         <th>Ajouté le</th>
         <th class="col-actions">Actions</th>
@@ -47,6 +48,7 @@
         <td>{{ m["ram_go"] }}</td>
         <td>{{ m["disque"] }}</td>
         <td>{{ m["arch"] }}</td>
+        <td><strong>{{ m["site"] | site_code if m["site"] else "—" }}</strong></td>
         <td>{{ m["user_session"] or "—" }}</td>
         <td>{{ m["date_ajout"][:10] }}</td>
         <td class="col-actions">

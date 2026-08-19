@@ -4,7 +4,7 @@ import io
 import subprocess
 import threading
 
-from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app import get_db
 from app.routes.auth import login_required
@@ -30,7 +30,16 @@ CHAMPS = [
 @login_required
 def liste():
     db = get_db()
-    machines = db.execute("SELECT * FROM machines ORDER BY nom").fetchall()
+    if session.get("role") == "admin":
+        machines = db.execute("SELECT * FROM machines ORDER BY nom").fetchall()
+    else:
+        site = session.get("site", "")
+        if site:
+            machines = db.execute(
+                "SELECT * FROM machines WHERE site = ? ORDER BY nom", (site,)
+            ).fetchall()
+        else:
+            machines = []
     return render_template("inventaire/liste.html", machines=machines)
 
 
@@ -45,11 +54,12 @@ def ajouter():
         db = get_db()
         db.execute(
             """INSERT INTO machines (nom, numero_serie, marque_modele, processeur,
-               generation, ram_go, disque, arch, user_session, obs)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               generation, ram_go, disque, arch, user_session, obs, site)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (donnees["nom"], donnees["numero_serie"], donnees["marque_modele"],
              donnees["processeur"], donnees["generation"], donnees["ram_go"],
-             donnees["disque"], donnees["arch"], donnees["user_session"], donnees["obs"]),
+             donnees["disque"], donnees["arch"], donnees["user_session"], donnees["obs"],
+             session.get("site", "")),
         )
         db.commit()
         flash("Poste « " + donnees["nom"] + " » ajouté à l'inventaire.", "success")
@@ -201,11 +211,11 @@ def statut(scan_id):
                 continue
             db.execute(
                 """INSERT INTO machines (nom, numero_serie, marque_modele, processeur,
-                   generation, ram_go, disque, arch, user_session, obs)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   generation, ram_go, disque, arch, user_session, obs, site)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (m["nom"], m["numero_serie"], m["marque_modele"], m["processeur"],
                  m["generation"], m["ram_go"], m["disque"], m["arch"],
-                 m.get("user_session", ""), m["obs"]),
+                 m.get("user_session", ""), m["obs"], session.get("site", "")),
             )
             existants.add(m["nom"])
             etat["ajoutes"] += 1

@@ -1,7 +1,7 @@
 import datetime
 import threading
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app import get_db
 from app.routes.auth import login_required
@@ -45,9 +45,18 @@ def _toner_etat(niveau):
 @login_required
 def liste():
     db = get_db()
-    imprimantes = db.execute(
-        "SELECT * FROM imprimantes ORDER BY nom"
-    ).fetchall()
+    if session.get("role") == "admin":
+        imprimantes = db.execute(
+            "SELECT * FROM imprimantes ORDER BY nom"
+        ).fetchall()
+    else:
+        site = session.get("site", "")
+        if site:
+            imprimantes = db.execute(
+                "SELECT * FROM imprimantes WHERE site = ? ORDER BY nom", (site,)
+            ).fetchall()
+        else:
+            imprimantes = []
     return render_template("imprimantes/liste.html", imprimantes=imprimantes)
 
 
@@ -71,11 +80,11 @@ def ajouter():
         db = get_db()
         db.execute(
             """INSERT INTO imprimantes (nom, adresse_ip, marque_modele, reference_toner,
-               stock_toner, source_machine, remarques)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               stock_toner, source_machine, remarques, site)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (donnees["nom"], donnees["adresse_ip"], donnees["marque_modele"],
              donnees["reference_toner"], donnees["stock_toner"],
-             donnees["source_machine"], donnees["remarques"]),
+             donnees["source_machine"], donnees["remarques"], session.get("site", "")),
         )
         db.commit()
         flash("Imprimante « " + donnees["nom"] + " » ajoutée.", "success")
@@ -372,9 +381,9 @@ def statut_scan(scan_id):
             desc = (r.get("description") or "Imprimante " + ip).strip()[:60]
             db.execute(
                 """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-                   reference_toner, stock_toner, source_machine, remarques)
-                   VALUES (?, ?, ?, '', 0, 'scan réseau', 'Ajoutée via scan réseau')""",
-                (desc, ip, desc),
+                   reference_toner, stock_toner, source_machine, remarques, site)
+                   VALUES (?, ?, ?, '', 0, 'scan réseau', 'Ajoutée via scan réseau', ?)""",
+                (desc, ip, desc, session.get("site", "")),
             )
             existants_ip.add(ip)
             existants_nom.add(desc)
@@ -387,9 +396,9 @@ def statut_scan(scan_id):
             source = (r.get("source") or "").strip()
             db.execute(
                 """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-                   reference_toner, stock_toner, source_machine, remarques)
-                   VALUES (?, '', ?, '', 0, ?, 'Ajoutée via scan USB/WMI')""",
-                (nom, nom, source),
+                   reference_toner, stock_toner, source_machine, remarques, site)
+                   VALUES (?, '', ?, '', 0, ?, 'Ajoutée via scan USB/WMI', ?)""",
+                (nom, nom, source, session.get("site", "")),
             )
             existants_nom.add(nom)
             etat["ajoutes"] += 1
@@ -423,9 +432,9 @@ def scan_ajouter():
         return redirect(url_for("imprimantes.liste"))
     db.execute(
         """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-           reference_toner, stock_toner, source_machine, remarques)
-           VALUES (?, ?, ?, '', 0, 'scan réseau', 'Ajoutée via scan réseau')""",
-        (nom, ip, description),
+           reference_toner, stock_toner, source_machine, remarques, site)
+           VALUES (?, ?, ?, '', 0, 'scan réseau', 'Ajoutée via scan réseau', ?)""",
+        (nom, ip, description, session.get("site", "")),
     )
     db.commit()
     flash("Imprimante « " + nom + " » ajoutée.", "success")

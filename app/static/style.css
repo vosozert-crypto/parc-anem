@@ -522,7 +522,33 @@ body.mode-portrait .container {
   box-shadow: var(--shadow);
   -webkit-overflow-scrolling: touch;
   max-height: 75vh;
-  margin: 0 0.5cm;
+  margin: 0 0 16px 0;
+  width: 100%;
+}
+
+#table-consolide {
+  table-layout: fixed;
+  width: 100%;
+}
+
+#table-consolide th:nth-child(1) { width: 5%; }
+#table-consolide th:nth-child(2) { width: 22%; }
+#table-consolide th:nth-child(3) { width: 12%; }
+#table-consolide th:nth-child(4) { width: 18%; }
+#table-consolide th:nth-child(5) { width: 10%; }
+#table-consolide th:nth-child(6) { width: 22%; }
+#table-consolide th:nth-child(7) { width: 11%; }
+
+#table-consolide td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#table-consolide td input,
+#table-consolide td select {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .table-wrap::-webkit-scrollbar {

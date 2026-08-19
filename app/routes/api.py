@@ -50,12 +50,13 @@ def recevoir_machines():
             continue
         db.execute(
             """INSERT INTO machines (nom, numero_serie, marque_modele, processeur,
-               generation, ram_go, disque, arch, user_session, obs)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               generation, ram_go, disque, arch, user_session, obs, site)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (nom, m.get("numero_serie", ""), m.get("marque_modele", ""),
              m.get("processeur", ""), m.get("generation", ""),
              m.get("ram_go", ""), m.get("disque", ""), m.get("arch", ""),
-             m.get("user_session", ""), m.get("obs", "")),
+             m.get("user_session", ""), m.get("obs", ""),
+             m.get("site", site)),
         )
         existants.add(nom)
         ajoutes += 1
@@ -94,14 +95,15 @@ def recevoir_imprimantes():
         if nom and nom in existants_nom:
             ignores += 1
             continue
-        db.execute(
-            """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-               reference_toner, stock_toner, source_machine, remarques)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (nom or "Imprimante " + ip, ip, p.get("marque_modele", ""),
-             p.get("reference_toner", ""), p.get("stock_toner", 0),
-             p.get("source_machine", ""), p.get("remarques", "")),
-        )
+            db.execute(
+                """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
+                   reference_toner, stock_toner, source_machine, remarques, site)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (nom or "Imprimante " + ip, ip, p.get("marque_modele", ""),
+                 p.get("reference_toner", ""), p.get("stock_toner", 0),
+                 p.get("source_machine", ""), p.get("remarques", ""),
+                 p.get("site", site)),
+            )
         if ip:
             existants_ip.add(ip)
         if nom:
@@ -197,9 +199,9 @@ def import_excel():
             source = vals[col_site] if col_site is not None and col_site < len(vals) else ""
             db.execute(
                 """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-                   reference_toner, stock_toner, source_machine, remarques)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (nom, ip, mode, "", 0, source, "import excel"),
+                   reference_toner, stock_toner, source_machine, remarques, site)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (nom, ip, mode, "", 0, source, "import excel", site_utilisateur),
             )
             if ip:
                 existants_imp_ip.add(ip)
@@ -217,9 +219,9 @@ def import_excel():
             site = (vals[col_site] if col_site is not None and col_site < len(vals) else "") or site_utilisateur
             db.execute(
                 """INSERT INTO machines (nom, numero_serie, marque_modele, processeur,
-                   generation, ram_go, disque, arch, user_session, obs)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (nom, sn, modele, proc, "", ram, "", arch, "", "import excel"),
+                   generation, ram_go, disque, arch, user_session, obs, site)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (nom, sn, modele, proc, "", ram, "", arch, "", "import excel", site),
             )
             existants_machines.add(nom)
             ajoutes_machines += 1
