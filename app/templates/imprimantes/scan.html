@@ -11,6 +11,11 @@
   <a href="{{ url_for('imprimantes.liste') }}" class="btn">← Liste imprimantes</a>
 </section>
 
+<div class="alert alert-warning">
+  <strong>⚠ Attention :</strong> Ce scan est execute depuis le serveur cloud (Railway). Il ne peut pas joindre les imprimantes du reseau local ALEM.<br>
+  Pour scanner les imprimantes du reseau, <a href="{{ url_for('main.telecharger_bat') }}">telechargez le fichier .BAT</a> et executez-le sur un poste connecte au reseau.
+</div>
+
 {% if cidr_actuel %}
 <p class="info-cidr">Réseau détecté : <code>{{ cidr_actuel }}</code></p>
 {% endif %}

@@ -11,6 +11,11 @@
   <a href="{{ url_for('inventaire.liste') }}" class="btn">← Retour à l'inventaire</a>
 </section>
 
+<div class="alert alert-warning">
+  <strong>⚠ Attention :</strong> Ce scan est execute depuis le serveur cloud (Railway). Il ne peut pas joindre les PC du reseau local ALEM.<br>
+  Pour scanner les PC et imprimantes du reseau, <a href="{{ url_for('main.telecharger_bat') }}">telechargez le fichier .BAT</a> et executez-le sur un poste connecte au reseau.
+</div>
+
 <form method="post" class="form scan-form">
   <div class="form-row">
     <label for="plage">Plage réseau (CIDR)</label>
