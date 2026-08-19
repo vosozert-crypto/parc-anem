@@ -121,9 +121,9 @@ def _lignes_partage(annee):
                   COALESCE(p.qte_achetee, 0) AS qte_achetee,
                   COALESCE(p.partage_total, 0) AS partage_total,
                   COALESCE(p.repartition, '{}') AS repartition,
-                  COALESCE(p.date_maj, '') AS date_maj
+                  TO_CHAR(p.date_maj, 'YYYY-MM-DD HH24:MI:SS') AS date_maj
            FROM partage_catalogue pc
-           LEFT JOIN partage p ON p.designation_id = pc.id AND p.annee = ?
+           LEFT JOIN partage p ON p.designation_id = pc.id AND p.annee = %s
            WHERE COALESCE(pc.masque, 0) = 0
            ORDER BY pc.id""",
         (annee,),
@@ -168,7 +168,7 @@ def _enregistrer_partage(annee, form):
         repartition = json.dumps(rep, ensure_ascii=False)
         db.execute(
             """INSERT INTO partage (annee, designation_id, qte_achetee, partage_total, repartition, rempli_par, date_maj)
-               VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+               VALUES (%s, %s, %s, %s, %s, %s, NOW())
                ON CONFLICT(annee, designation_id) DO UPDATE SET
                  qte_achetee = excluded.qte_achetee,
                  partage_total = excluded.partage_total,
@@ -189,13 +189,13 @@ def ajouter(annee):
         return redirect(url_for("partage.annee", annee=annee))
     db = get_db()
     existe = db.execute(
-        "SELECT id FROM partage_catalogue WHERE designation = ? COLLATE NOCASE",
+        "SELECT id FROM partage_catalogue WHERE designation = %s",
         (designation,),
     ).fetchone()
     if existe:
         flash("Cette désignation existe déjà.", "warning")
     else:
-        db.execute("INSERT INTO partage_catalogue (designation) VALUES (?)", (designation,))
+        db.execute("INSERT INTO partage_catalogue (designation) VALUES (%s)", (designation,))
         db.commit()
         flash("Désignation ajoutée : « " + designation + " ».", "success")
     return redirect(url_for("partage.annee", annee=annee))
@@ -232,7 +232,7 @@ def importer_besoins(annee):
             continue
         db.execute(
             """INSERT INTO partage (annee, designation_id, qte_achetee, partage_total, repartition, rempli_par, date_maj)
-               VALUES (?, ?, 0, ?, ?, ?, datetime('now'))
+               VALUES (%s, %s, 0, %s, %s, %s, NOW())
                ON CONFLICT(annee, designation_id) DO UPDATE SET
                  partage_total = excluded.partage_total,
                  repartition = excluded.repartition,
@@ -318,3 +318,4 @@ def exporter_xlsx(annee):
         download_name="partage_consommables_{}.xlsx".format(annee),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
