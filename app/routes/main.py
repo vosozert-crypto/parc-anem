@@ -1,5 +1,8 @@
 from datetime import date
 
+import os
+from datetime import date
+
 from flask import Blueprint, render_template, session
 
 from app import get_db
@@ -83,4 +86,16 @@ def index():
 
     return render_template(
         "index.html", nom=session.get("nom", ""), stats=stats, is_admin=is_admin,
+    )
+
+
+@main_bp.route("/scan")
+@login_required
+def scan_instructions():
+    api_token = os.environ.get("API_TOKEN", "anem-scan-2026-secret")
+    site_utilisateur = session.get("site", "")
+    return render_template(
+        "scan/instructions.html",
+        api_token=api_token,
+        site_utilisateur=site_utilisateur,
     )

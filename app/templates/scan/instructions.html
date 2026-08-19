@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+  <h2 class="mb-4">Scan Reseau - Instructions</h2>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">1. Installer les prerequis</h5>
+    </div>
+    <div class="card-body">
+      <p>Sur le poste Windows de l'AWEM/ALEM qui a acces au reseau local :</p>
+      <ol>
+        <li>Installer <strong>Python 3.11+</strong> : <a href="https://www.python.org/downloads/" target="_blank">python.org</a></li>
+        <li>Ouvrir un terminal et lancer :</li>
+      </ol>
+      <pre class="bg-light p-3 rounded"><code>pip install requests wmi pythoncom</code></pre>
+      <p><em>Sur Windows, <code>wmi</code> et <code>pythoncom</code> sont inclus dans <code>pywin32</code> qui s'installe via <code>pip install pywin32</code></em></p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">2. Telecharger le script</h5>
+    </div>
+    <div class="card-body">
+      <p>Copier le fichier <code>scanner_local.py</code> sur le poste cible.</p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">3. Lancer le scan</h5>
+    </div>
+    <div class="card-body">
+      <p>Ouvrir un terminal <strong>en tant qu'administrateur</strong> et lancer :</p>
+      <pre class="bg-light p-3 rounded"><code>python scanner_local.py --url https://parc-anem-production.up.railway.app --token <strong>{{ api_token }}</strong> --site "<strong>{{ site_utilisateur }}</strong>"</code></pre>
+      <p>Si le reseau n'est pas detecte automatiquement :</p>
+      <pre class="bg-light p-3 rounded"><code>python scanner_local.py --url https://parc-anem-production.up.railway.app --token {{ api_token }} --site "{{ site_utilisateur }}" --cidr 192.168.100.0/24</code></pre>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">4. Resultat</h5>
+    </div>
+    <div class="card-body">
+      <p>Le scan envoie automatiquement les PC et imprimantes trouves a la base de donnees centrale. Les donnees apparaissent sur <a href="/inventaire/">l'inventaire</a> et les <a href="/imprimantes/">imprimantes</a> sans intervention.</p>
+      <p class="text-muted">Reexecuter le scan regulierement pour garder les donnees a jour.</p>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">
+      <h5 class="mb-0">Token API</h5>
+    </div>
+    <div class="card-body">
+      <div class="input-group">
+        <input type="text" class="form-control" id="apiToken" value="{{ api_token }}" readonly>
+        <button class="btn btn-outline-dark" onclick="copierToken()">Copier</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function copierToken() {
+  var el = document.getElementById("apiToken");
+  el.select();
+  document.execCommand("copy");
+  alert("Token copie !");
+}
+</script>
+{% endblock %}

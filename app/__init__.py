@@ -28,6 +28,7 @@ def create_app(config=None):
     from app.routes.partage import partage_bp
     from app.routes.securite import securite_bp
     from app.routes.utilisateurs import utilisateurs_bp
+    from app.routes.api import api_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
@@ -37,6 +38,7 @@ def create_app(config=None):
     app.register_blueprint(utilisateurs_bp)
     app.register_blueprint(besoins_bp)
     app.register_blueprint(partage_bp)
+    app.register_blueprint(api_bp)
 
     from app.donnees_consommables import site_code
 

@@ -39,6 +39,7 @@
       {% if session.get('role') == 'admin' %}
       <a href="{{ url_for('utilisateurs.liste') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('utilisateurs.') }}">Utilisateurs</a>
       {% endif %}
+      <a href="{{ url_for('main.scan_instructions') }}" class="{{ 'active' if request.endpoint == 'main.scan_instructions' }}">Scan</a>
     </nav>
     <div class="topbar-user">
       <button type="button" id="btn-etale" class="btn btn-small btn-etale" title="Basculer entre pleine largeur (paysage) et centré (portrait)">⛶ Paysage</button>
