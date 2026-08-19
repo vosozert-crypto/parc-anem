@@ -166,6 +166,36 @@ def init_db():
 
     if n == 0:
         _seed_initial(db)
+    else:
+        _migrer_users(db)
+
+
+def _migrer_users(db):
+    """Ajoute les users du seed s'ils n'existent pas encore (migration auto)."""
+    from werkzeug.security import generate_password_hash
+
+    all_users = [
+        ("alem.bouira", "alem.bouira@anem.dz", "Xt3jQKEUTe", "user", "ALEM bouira"),
+        ("awem.bouira", "awem.bouira@anem.dz", "FyphYUo33L", "user", "AWEM bouira"),
+        ("alem.selghozlane", "alem.selghozlane@anem.dz", "SoeY9IAfmO", "user", "ALEM seg"),
+        ("alem.mchedellah", "alem.mchedellah@anem.dz", "qhMNW9mJWg", "user", "ALEM m'chedellah"),
+        ("alem.lakhdaria", "alem.lakhdaria@anem.dz", "PM5uHjxEUV", "user", "ALEM lakhdaria"),
+        ("alem.ainbessam", "alem.ainbessam@anem.dz", "EHPa2mXBaX", "user", "ALEM ain bessam"),
+        ("alem.bordjkhris", "alem.bordjkhris@anem.dz", "Br0rdj!2026", "user", "ALEM bordj khris"),
+    ]
+    existing = {
+        r["email"]: r["site"]
+        for r in db.execute("SELECT email, site FROM users").fetchall()
+    }
+    for nom, email, pwd, role, site in all_users:
+        if email not in existing:
+            db.execute(
+                "INSERT INTO users (nom, email, mot_de_passe, role, site) VALUES (?, ?, ?, ?, ?)",
+                (nom, email, generate_password_hash(pwd), role, site),
+            )
+        elif not existing[email] and site:
+            db.execute("UPDATE users SET site = ? WHERE email = ? AND (site IS NULL OR site = '')", (site, email))
+    db.commit()
 
 
 def _seed_initial(db):
@@ -182,6 +212,7 @@ def _seed_initial(db):
         ("alem.mchedellah", "alem.mchedellah@anem.dz", "qhMNW9mJWg", "user", "ALEM m'chedellah"),
         ("alem.lakhdaria", "alem.lakhdaria@anem.dz", "PM5uHjxEUV", "user", "ALEM lakhdaria"),
         ("alem.ainbessam", "alem.ainbessam@anem.dz", "EHPa2mXBaX", "user", "ALEM ain bessam"),
+        ("alem.bordjkhris", "alem.bordjkhris@anem.dz", "Br0rdj!2026", "user", "ALEM bordj khris"),
     ]
     for nom, email, pwd, role, site in users:
         db.execute(

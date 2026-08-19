@@ -131,6 +131,7 @@ SITES_PAR_DEFAUT = {
     "alem.bouira": "ALEM bouira",
     "alem.ainbessam": "ALEM ain bessam",
     "awem.bouira": "AWEM bouira",
+    "alem.bordjkhris": "ALEM bordj khris",
 }
 
 CODES_SITES = {
