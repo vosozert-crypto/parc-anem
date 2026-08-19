@@ -26,18 +26,43 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$Token='<<TOKEN>>';" ^
  "$Site='<<SITE>>';" ^
  "Write-Host '[ANEM] Detection du reseau...' -ForegroundColor Cyan;" ^
- "$iface=Get-NetIPAddress -AddressFamily IPv4|Where-Object{$_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notlike '127.*'}|Select-Object -First 1;" ^
- "$b=[BitConverter]::GetBytes([uint32]([ipaddress]$iface.IPAddress).Address);" ^
- "$cidr=$b[3]+'.'+$b[2]+'.'+$b[1]+'.'+$b[0]+'/'+$iface.PrefixLength;" ^
+ "$cidr=$null;" ^
+ "$iface=Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue|Where-Object{$_.PrefixOrigin -ne 'WellKnown' -and $_.IPAddress -notlike '127.*' -and $_.IPAddress -ne '' -and $_.IPAddress -ne $null}|Select-Object -First 1;" ^
+ "if($iface -and $iface.IPAddress -and $iface.PrefixLength){" ^
+ "  $octets=$iface.IPAddress.Split('.');" ^
+ "  $cidr=$octets[0]+'.'+$octets[1]+'.'+$octets[2]+'.'+$octets[3]+'/'+$iface.PrefixLength;" ^
+ "}else{" ^
+ "  Write-Host '[ANEM] Tentative via ipconfig...' -ForegroundColor Yellow;" ^
+ "  $out=ipconfig|Out-String;" ^
+ "  if($out -match 'Adresse IPv4[^:]*:\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)'){" ^
+ "    $myIp=$Matches[1];" ^
+ "    if($out -match 'Masque de sous-r\\u00e9seau[^:]*:\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)'){" ^
+ "      $myMask=$Matches[1];" ^
+ "      $net=[ipaddress]$myIp;" ^
+ "      $msk=[ipaddress]$myMask;" ^
+ "      $netBytes=$net.GetAddressBytes();$mskBytes=$msk.GetAddressBytes();" ^
+ "      $cidrBits=0;for($j=0;$j -lt 4;$j++){$b=$mskBytes[$j];while($b -gt 0){$cidrBits+=$b%2;$b=[int]$b/2}};" ^
+ "      $cidr=$myIp+'/'+$cidrBits;" ^
+ "    }" ^
+ "  }" ^
+ "};" ^
+ "if(-not $cidr){" ^
+ "  Write-Host '[ANEM] ERREUR: Impossible de detecter le reseau.' -ForegroundColor Red;" ^
+ "  $cidr='192.168.1.0/24';" ^
+ "  Write-Host '[ANEM] Fallback: '+$cidr -ForegroundColor Yellow;" ^
+ "};" ^
  "Write-Host '[ANEM] Reseau: '+$cidr -ForegroundColor Cyan;" ^
  "$parts=$cidr.Split('/');" ^
- "$ip0=[BitConverter]::ToUInt32(([ipaddress]$parts[0]).GetAddressBytes(),0);" ^
- "$mask=[math]::Pow(2,(32-[int]$parts[1]))-2;" ^
+ "$ipParts=$parts[0].Split('.');" ^
+ "$ipInt=[uint32]([int]$ipParts[0]*16777216+[int]$ipParts[1]*65536+[int]$ipParts[2]*256+[int]$ipParts[3]);" ^
+ "$cidrBits=[int]$parts[1];" ^
+ "$hostBits=32-$cidrBits;" ^
+ "$maskInt=[uint32]([math]::Pow(2,$hostBits)-2);" ^
  "$machines=@();$imprimantes=@();$count=0;" ^
- "for($i=1;$i -le $mask;$i++){" ^
- " $count++;$ipInt=$ip0+$i;$bb=[BitConverter]::GetBytes($ipInt);" ^
+ "for($i=1;$i -le $maskInt;$i++){" ^
+ " $count++;$curInt=$ipInt+$i;$bb=[BitConverter]::GetBytes($curInt);" ^
  " $ip=$bb[3]+'.'+$bb[2]+'.'+$bb[1]+'.'+$bb[0];" ^
- " $pct=[math]::Round($count/$mask*100);" ^
+ " $pct=[math]::Round($count/$maskInt*100);" ^
  " Write-Progress -Activity 'Scan' -Status ('% '+$pct+' - '+$ip) -PercentComplete $pct;" ^
  " try{$ping=New-Object System.Net.NetworkInformation.Ping;$r=$ping.Send($ip,200);$ok=$r.Status -eq 'Success'}catch{$ok=$false};" ^
  " if($ok){" ^
