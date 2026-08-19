@@ -69,10 +69,14 @@ def get_connection():
     if database_url and _HAS_PG:
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
+        if "sslmode=" not in database_url:
+            separator = "&" if "?" in database_url else "?"
+            database_url += separator + "sslmode=require"
         conn = psycopg2.connect(
             database_url,
             cursor_factory=psycopg2.extras.RealDictCursor,
         )
+        conn.autocommit = False
         return DBWrapper(conn, is_pg=True)
     else:
         import sqlite3

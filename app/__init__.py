@@ -42,6 +42,15 @@ def create_app(config=None):
 
     app.jinja_env.filters["site_code"] = site_code
 
+    @app.teardown_appcontext
+    def close_db(exc):
+        db = g.pop("db", None)
+        if db is not None:
+            try:
+                db.close()
+            except Exception:
+                pass
+
     with app.app_context():
         init_db()
 
