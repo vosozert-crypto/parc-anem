@@ -45,7 +45,7 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  " $res=$j.PS.EndInvoke($j.Handle);$j.PS.Dispose();" ^
  " if($res){$found++;$alive.Add($res.Value);Write-Host ('  [+] '+$res.Value) -ForegroundColor Green}" ^
  " $done++;$pct=[math]::Round($done/$total*100);" ^
- " if($done -band 31 -eq 0){Write-Progress -Activity 'Ping' -Status ('Hosts vivants: '+$found+'/'+done+' ('+$pct+'%%)') -PercentComplete $pct}" ^
+ " if($done -band 31 -eq 0){Write-Progress -Activity 'Ping' -Status ('Hosts vivants: '+$found+'/'+$total+' - '+$pct+'pct') -PercentComplete $pct}" ^
  "};" ^
  "$pool.Close();Write-Progress -Activity 'Ping' -Completed;" ^
  "Write-Host ('[ANEM] '+$found+' PC actifs detectes.') -ForegroundColor Cyan;" ^
