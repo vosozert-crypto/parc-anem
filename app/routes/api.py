@@ -73,6 +73,7 @@ def recevoir_imprimantes():
     if not data or "imprimantes" not in data:
         return jsonify({"erreur": "JSON requis avec cle 'imprimantes'."}), 400
     db = get_db()
+    site = data.get("site", "")
     existants_ip = {
         r["adresse_ip"]
         for r in db.execute(
@@ -95,15 +96,15 @@ def recevoir_imprimantes():
         if nom and nom in existants_nom:
             ignores += 1
             continue
-            db.execute(
-                """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-                   reference_toner, stock_toner, source_machine, remarques, site)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (nom or "Imprimante " + ip, ip, p.get("marque_modele", ""),
-                 p.get("reference_toner", ""), p.get("stock_toner", 0),
-                 p.get("source_machine", ""), p.get("remarques", ""),
-                 p.get("site", site)),
-            )
+        db.execute(
+            """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
+               reference_toner, stock_toner, source_machine, remarques, site)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (nom or "Imprimante " + ip, ip, p.get("marque_modele", ""),
+             p.get("reference_toner", ""), p.get("stock_toner", 0),
+             p.get("source_machine", ""), p.get("remarques", ""),
+             p.get("site", site)),
+        )
         if ip:
             existants_ip.add(ip)
         if nom:
