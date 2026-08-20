@@ -115,27 +115,22 @@ def scan():
     from app.routes.besoins import preparer_besoins_site, _site_utilisateur
 
     cidr_actuel = detecter_cidr() or ""
-    if request.method == "POST":
-        plage = request.form.get("plage", "").strip()
-        try:
-            parallelisme = int(request.form.get("parallelisme", "50"))
-        except ValueError:
-            parallelisme = 50
-        if not plage:
-            plage = cidr_actuel
-        if not plage:
-            flash("Indiquez la plage réseau (ex : 192.168.1.0/24) ; la détection automatique a échoué.", "warning")
-            return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
-        try:
-            hosts = construire_plage(plage)
-        except ValueError as e:
-            flash(str(e), "danger")
-            return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=parallelisme)
+    plage = request.args.get("plage", "")
+    if not plage:
+        plage = cidr_actuel
+    if not plage:
+        flash("Détection du réseau locale en cours...", "info")
+        plage = "10.10.0.0/24"  # plage par défaut locale
+    
+    try:
+        hosts = construire_plage(plage)
+    except ValueError as e:
+        flash(str(e), "danger")
+        return redirect(url_for("ordinateurs.liste"))
 
-        preparer_besoins_site(datetime.date.today().year, _site_utilisateur())
-        scan_id = _demarrer_scan(plage, hosts, parallelisme)
-        return redirect(url_for("ordinateurs.live", scan_id=scan_id))
-    return render_template("ordinateurs/scan.html", cidr_actuel=cidr_actuel, parallelisme=50)
+    preparer_besoins_site(datetime.date.today().year, _site_utilisateur())
+    scan_id = _demarrer_scan(plage, hosts, 50)
+    return redirect(url_for("ordinateurs.live", scan_id=scan_id))
 
 
 _SCANS = {}
