@@ -115,10 +115,10 @@ def _lignes_partage(annee):
 
     rows = db.execute(
         """SELECT pc.id AS id, pc.designation AS designation,
-                  COALESCE(p.qte_achetee, 0) AS qte_achetee,
+                  COALESCE(p.qte_achette, 0) AS qte_achette,
                   COALESCE(p.partage_total, 0) AS partage_total,
                   COALESCE(p.repartition, '{}') AS repartition,
-                  COALESCE(TO_CHAR(p.date_maj, 'YYYY-MM-DD HH24:MI:SS'), '') AS date_maj
+                  COALESCE(p.date_maj, '') AS date_maj
            FROM partage_catalogue pc
            LEFT JOIN partage p ON p.designation_id = pc.id AND p.annee = ?
            WHERE COALESCE(pc.masque, 0) = 0
