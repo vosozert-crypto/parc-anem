@@ -7,7 +7,7 @@ import threading
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, session, url_for
 
 from app import get_db
-from app.routes.auth import login_required
+from app.routes.auth import login_required, site_accessible
 from app.scan import construire_plage, detecter_cidr, lister_imprimantes, ping, scan_reseau
 
 ordinateurs_bp = Blueprint("ordinateurs", __name__, url_prefix="/ordinateurs")
@@ -75,6 +75,9 @@ def modifier(mid):
     if machine is None:
         flash("Poste introuvable.", "warning")
         return redirect(url_for('ordinateurs.liste'))
+    if not site_accessible(machine):
+        flash("Vous n'avez pas accès à ce poste.", "danger")
+        return redirect(url_for('ordinateurs.liste'))
     if request.method == "POST":
         donnees = {c[0]: request.form.get(c[0], "").strip() for c in CHAMPS}
         if not donnees["nom"]:
@@ -103,6 +106,9 @@ def supprimer(mid):
     if machine is None:
         flash("Poste introuvable.", "warning")
         return redirect(url_for('ordinateurs.liste'))
+    if not site_accessible(machine):
+        flash("Vous n'avez pas accès à ce poste.", "danger")
+        return redirect(url_for('ordinateurs.liste'))
     db.execute("DELETE FROM machines WHERE id = ?", (mid,))
     db.commit()
     flash("Poste « " + machine["nom"] + " » supprimé.", "info")
@@ -120,7 +126,7 @@ def scan():
         plage = cidr_actuel
     if not plage:
         flash("Détection du réseau locale en cours...", "info")
-        plage = "10.10.0.0/24"  # plage par défaut locale
+        plage = "192.168.0.0/24"  # plage par défaut locale modifiée
     
     try:
         hosts = construire_plage(plage)
@@ -249,7 +255,12 @@ def exporter_csv():
     from flask import Response
 
     db = get_db()
-    machines = db.execute("SELECT * FROM machines ORDER BY nom").fetchall()
+    if session.get("role") == "admin":
+        machines = db.execute("SELECT * FROM machines ORDER BY nom").fetchall()
+    else:
+        machines = db.execute(
+            "SELECT * FROM machines WHERE site = ? ORDER BY nom", (session.get("site", ""),)
+        ).fetchall()
     tampon = io.StringIO()
     ecrivain = csv.writer(tampon, delimiter=";")
     ecrivain.writerow([label for _, label in _colonnes_export()])
@@ -303,7 +314,7 @@ def exporter_xlsx():
 def _machine_ou_404(mid):
     db = get_db()
     machine = db.execute("SELECT * FROM machines WHERE id = ?", (mid,)).fetchone()
-    if machine is None:
+    if machine is None or not site_accessible(machine):
         return None
     return machine
 

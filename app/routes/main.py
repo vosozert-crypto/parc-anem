@@ -25,11 +25,11 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ^
  "$Url='<<URL>>';" ^
  "$Token='<<TOKEN>>';" ^
  "$Site='<<SITE>>';" ^
- "$localIP=(Get-NetIPAddress -AddressFamily IPv4|Where-Object{$_.IPAddress -match '^10\.10\.\d+\.\d+$'}|Select-Object -First 1).IPAddress;" ^
- "if(-not $localIP){$localIP='10.10.0.100';Write-Host '[ANEM] IP locale non detectee, usage 10.10.0.x par defaut' -ForegroundColor Yellow};" ^
+ "$localIP=(Get-NetIPAddress -AddressFamily IPv4|Where-Object{$_.IPAddress -match '^192\.168\.\d+\.\d+$'}|Select-Object -First 1).IPAddress;" ^
+ "if(-not $localIP){$localIP='192.168.0.100';Write-Host '[ANEM] IP locale non detectee, usage 192.168.0.x par defaut' -ForegroundColor Yellow};" ^
  "$x=([int]$localIP.Split('.')[2]);" ^
- "Write-Host ('[ANEM] Sous-reseau detecte: 10.10.'+$x+'.100-254 (scan parallele)') -ForegroundColor Cyan;" ^
- "$allIps=@();for($i=100;$i -le 254;$i++){$allIps+=('10.10.'+$x+'.'+$i)};" ^
+ "Write-Host ('[ANEM] Sous-reseau detecte: 192.168.'+$x+'.100-254 (scan parallele)') -ForegroundColor Cyan;" ^
+ "$allIps=@();for($i=100;$i -le 254;$i++){$allIps+=('192.168.'+$x+'.'+$i)};" ^
  "$alive=[System.Collections.Concurrent.ConcurrentBag[string]]::new();" ^
  "$total=$allIps.Count;$found=0;" ^
  "$pool=[runspacefactory]::CreateRunspacePool(1,80);$pool.Open();" ^
@@ -244,7 +244,7 @@ def index():
 @main_bp.route("/scan")
 @login_required
 def scan_instructions():
-    api_token = os.environ.get("API_TOKEN", "anem-scan-2026-secret")
+    api_token = os.environ.get("API_TOKEN") if session.get("role") == "admin" else None
     site_utilisateur = session.get("site", "")
     return render_template(
         "scan/instructions.html",
@@ -256,7 +256,7 @@ def scan_instructions():
 @main_bp.route("/scan/telecharger")
 @login_required
 def telecharger_bat():
-    api_token = os.environ.get("API_TOKEN", "anem-scan-2026-secret")
+    api_token = os.environ.get("API_TOKEN") if session.get("role") == "admin" else None
     site_utilisateur = session.get("site", "ANEM")
 
     host = request.host_url.rstrip("/")

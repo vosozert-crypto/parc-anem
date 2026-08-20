@@ -4,7 +4,7 @@ import threading
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from app import get_db
-from app.routes.auth import login_required
+from app.routes.auth import login_required, site_accessible
 from app.scan import (
     construire_plage,
     detecter_cidr,
@@ -95,6 +95,8 @@ def ajouter():
 def _trouver(pid):
     db = get_db()
     imp = db.execute("SELECT * FROM imprimantes WHERE id = ?", (pid,)).fetchone()
+    if imp is not None and not site_accessible(imp):
+        return db, None
     return db, imp
 
 
@@ -104,6 +106,9 @@ def modifier(pid):
     db, imp = _trouver(pid)
     if imp is None:
         flash("Imprimante introuvable.", "warning")
+        return redirect(url_for("imprimantes.liste"))
+    if not site_accessible(imp):
+        flash("Vous n'avez pas accès à cette imprimante.", "danger")
         return redirect(url_for("imprimantes.liste"))
     if request.method == "POST":
         donnees = _donnees_formulaire()
@@ -130,6 +135,9 @@ def supprimer(pid):
     db, imp = _trouver(pid)
     if imp is None:
         flash("Imprimante introuvable.", "warning")
+        return redirect(url_for("imprimantes.liste"))
+    if not site_accessible(imp):
+        flash("Vous n'avez pas accès à cette imprimante.", "danger")
         return redirect(url_for("imprimantes.liste"))
     db.execute("DELETE FROM imprimantes WHERE id = ?", (pid,))
     db.commit()
@@ -246,9 +254,9 @@ def decouvrir_ajouter():
         adresse_ip = m.group(1)
     db.execute(
         """INSERT INTO imprimantes (nom, adresse_ip, marque_modele,
-           reference_toner, stock_toner, source_machine, remarques)
-           VALUES (?, ?, ?, '', 0, ?, 'Ajoutée via découverte WMI')""",
-        (nom, adresse_ip, port or "", source),
+              reference_toner, stock_toner, source_machine, remarques, site)
+              VALUES (?, ?, ?, '', 0, ?, 'Ajoutée via découverte WMI', ?)""",
+          (nom, adresse_ip, port or "", source, session.get("site", "")),
     )
     db.commit()
     flash("Imprimante « " + nom + " » ajoutée.", "success")
@@ -266,7 +274,7 @@ def scan():
         plage = cidr_actuel
     if not plage:
         flash("Détection du réseau locale en cours...", "info")
-        plage = "10.10.0.0/24"  # plage par défaut locale
+        plage = "192.168.0.0/24"  # plage par défaut locale modifiée
     
     try:
         hosts = construire_plage(plage)
